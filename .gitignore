@@ -1,0 +1,75 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build output
+*.test
+*.out
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.coverprofile
+
+# Vendor directory (if not using Go modules)
+vendor/
+
+# Dependency directories (replace with your own if needed)
+bin/
+build/
+dist/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+*.bak
+
+# IDE/editor files
+.vscode/
+.idea/
+*.iml
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+.env
+.env.*
+*.env
+*.local
+*.dev
+.docker/
+
+# Swagger generated files
+swagger.yaml
+swagger.json
+docs/
+
+# Cache or local dev files
+.cache/
+tmp/
+sessions/
+*.pid
+
+# Go module files (keep these tracked, ignore only if generated separately)
+# go.mod
+# go.sum
+
+# Ignore coverage output
+coverage.out
+
+# PostgreSQL or Redis data (if dumped or temporarily stored)
+*.dump
+*.rdb
+*.sql
+
+# Optional: Swagger UI generated assets (if generated manually)
+swaggerui/
+
+# Optional: frontend (if any) build output
+frontend/build/
+frontend/dist/
