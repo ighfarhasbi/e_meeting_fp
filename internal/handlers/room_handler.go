@@ -30,7 +30,7 @@ func GetRooms(c echo.Context, db *sql.DB) error {
 	// iterasi melalui hasil query dan masukkan ke dalam slice
 	for rows.Next() {
 		var room models.Room
-		if err := rows.Scan(&room.ID, &room.Name, &room.Type, &room.PricePerHour, &room.Capacity, &room.ImgUrl, &room.CreatedAt, &room.UpdatedAt); err != nil {
+		if err := rows.Scan(&room.ID, &room.Name, &room.Type, &room.PricePerHour, &room.Capacity, &room.ImgPath, &room.CreatedAt, &room.UpdatedAt); err != nil {
 			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
 				Message: "Gagal mengambil daftar rooms",
 			})

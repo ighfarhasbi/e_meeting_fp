@@ -35,8 +35,11 @@ func main() {
 			Message: "Success",
 		})
 	})
-	// initialize room handler
-	handlers.InitRoomHandler(e, conn)
+
+	// initialize handlers
+	handlers.InitRoomHandler(e, conn)   // initialize room handler
+	handlers.InitSnacksHandler(e, conn) // initialize snacks handler
+	handlers.InitUserHandler(e, conn)   // initialize user handler
 
 	// start the server
 	e.Logger.Fatal(e.Start(":8080"))
