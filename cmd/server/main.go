@@ -42,5 +42,5 @@ func main() {
 	handlers.InitUserHandler(e, conn)   // initialize user handler
 
 	// start the server
-	e.Logger.Fatal(e.Start(":8080"))
+	e.Logger.Fatal(e.Start(":" + cgf.Port))
 }

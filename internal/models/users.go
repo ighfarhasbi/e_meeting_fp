@@ -11,3 +11,14 @@ type Users struct {
 	CreatedAt string `json:"created_at" db:"created_at"`
 	UpdatedAt string `json:"updated_at" db:"updated_at"`
 }
+
+type RegisterUserRequest struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginUserRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
