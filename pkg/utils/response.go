@@ -1,6 +1,6 @@
 package utils
 
-type Response struct {
+type SuccessResponse struct {
 	Message string `json:"message"`
 	Data    any    `json:"data"`
 }

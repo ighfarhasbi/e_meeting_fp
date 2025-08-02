@@ -6,10 +6,10 @@ import (
 	"e_meeting/pkg/utils"
 	"net/http"
 
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 )
 
-func InitRoomHandler(e *echo.Echo, dbConn *sql.DB) {
+func InitRoomHandler(e *echo.Group, dbConn *sql.DB) {
 	e.GET("/rooms", func(c echo.Context) error {
 		return GetRooms(c, dbConn)
 	})
@@ -45,7 +45,7 @@ func GetRooms(c echo.Context, db *sql.DB) error {
 	}
 
 	// kembalikan daftar rooms sebagai response
-	return c.JSON(http.StatusOK, utils.Response{
+	return c.JSON(http.StatusOK, utils.SuccessResponse{
 		Message: "Daftar rooms berhasil diambil",
 		Data:    rooms,
 	})

@@ -6,11 +6,11 @@ import (
 	"e_meeting/pkg/utils"
 	"net/http"
 
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // InitSnacksHandler initializes the snacks handler
-func InitSnacksHandler(e *echo.Echo, dbConn *sql.DB) {
+func InitSnacksHandler(e *echo.Group, dbConn *sql.DB) {
 	e.GET("/snacks", func(c echo.Context) error {
 		return GetSnacks(c, dbConn)
 	})
@@ -46,7 +46,7 @@ func GetSnacks(c echo.Context, db *sql.DB) error {
 	}
 
 	// kembalikan daftar snacks sebagai response
-	return c.JSON(http.StatusOK, utils.Response{
+	return c.JSON(http.StatusOK, utils.SuccessResponse{
 		Message: "Daftar snacks berhasil diambil",
 		Data:    snacks,
 	})
