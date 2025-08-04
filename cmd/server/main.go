@@ -62,7 +62,7 @@ func main() {
 	e.Use(echo.MiddlewareFunc(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			c.Response().Header().Set(echo.HeaderAccessControlAllowOrigin, "*")
-			c.Response().Header().Set(echo.HeaderAccessControlAllowMethods, "GET, POST, PUT, DELETE")
+			c.Response().Header().Set(echo.HeaderAccessControlAllowMethods, "GET, POST, PUT, DELETE, OPTIONS")
 			c.Response().Header().Set(echo.HeaderAccessControlAllowHeaders, "Content-Type, Authorization")
 			if c.Request().Method == http.MethodOptions {
 				return c.NoContent(http.StatusNoContent)
@@ -72,7 +72,6 @@ func main() {
 	}))
 
 	// set up Swagger documentation
-	// e.GET("/swagger/*", echo.WrapHandler(http.StripPrefix("/swagger/", http.FileServer(http.Dir("swagger")))))
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	// apply JWT middleware
 	group := e.Group("")

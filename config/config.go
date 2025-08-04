@@ -7,9 +7,11 @@ import (
 
 // Config menyimpan konfigurasi aplikasi
 type Config struct {
-	DBUrl     string
-	JWTSecret string
-	Port      string
+	DBUrl            string
+	JWTSecret        string
+	Port             string
+	GmailPassword    string // untuk mengirim email
+	JWTResetPassword string // untuk reset password
 }
 
 // New membaca konfigurasi dari environment
@@ -29,9 +31,21 @@ func New() *Config {
 		port = "8080" // default
 	}
 
+	gmailPassword := os.Getenv("GMAIL_PASSWORD")
+	if gmailPassword == "" {
+		log.Fatal("GMAIL_PASSWORD is not set in env")
+	}
+
+	jwtResetPassword := os.Getenv("JWT_RESET_PASSWORD")
+	if jwtResetPassword == "" {
+		log.Fatal("JWT_RESET_PASSWORD is not set in env")
+	}
+
 	return &Config{
-		DBUrl:     dbUrl,
-		JWTSecret: jwtSecret,
-		Port:      port,
+		DBUrl:            dbUrl,
+		JWTSecret:        jwtSecret,
+		Port:             port,
+		GmailPassword:    gmailPassword,
+		JWTResetPassword: jwtResetPassword,
 	}
 }

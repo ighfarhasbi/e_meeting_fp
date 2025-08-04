@@ -12,6 +12,11 @@ type Users struct {
 	UpdatedAt string `json:"updated_at" db:"updated_at"`
 }
 
+type PasswordReset struct {
+	ID    int    `json:"id" db:"id"`
+	Token string `json:"token" db:"token"`
+}
+
 type RegisterUserRequest struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
@@ -29,4 +34,13 @@ type AccessToken struct {
 
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token"`
+}
+
+type CheckEmailRequest struct {
+	Email string `json:"email"`
+}
+
+type ResetPasswordRequest struct {
+	NewPassword     string `json:"new_password"`
+	ConfirmPassword string `json:"confirm_password"`
 }
