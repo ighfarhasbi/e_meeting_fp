@@ -18,7 +18,7 @@ type TokenResponse struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
-type MultupleErrorResponse struct {
+type MultipleErrorResponse struct {
 	Errors []string `json:"massage"`
 }
 

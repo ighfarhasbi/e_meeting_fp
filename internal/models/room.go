@@ -12,3 +12,11 @@ type Room struct {
 	CreatedAt    string          `json:"created_at" db:"created_at"`
 	UpdatedAt    string          `json:"updated_at" db:"updated_at"`
 }
+
+type CreateRoomRequest struct {
+	Name         string  `json:"name"`
+	Type         string  `json:"type"`
+	PricePerHour float64 `json:"price_per_hour"`
+	Capacity     int     `json:"capacity"`
+	ImgPath      string  `json:"img_path"`
+}
