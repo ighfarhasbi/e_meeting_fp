@@ -13,10 +13,23 @@ type Room struct {
 	UpdatedAt    string          `json:"updated_at" db:"updated_at"`
 }
 
-type CreateRoomRequest struct {
+// CU -> Create or Update
+type CURoomRequest struct {
 	Name         string  `json:"name"`
 	Type         string  `json:"type"`
 	PricePerHour float64 `json:"price_per_hour"`
 	Capacity     int     `json:"capacity"`
 	ImgPath      string  `json:"img_path"`
+}
+
+// bedanya di price per hour harus float
+type RoomResponse struct {
+	ID           int     `json:"id"`
+	Name         string  `json:"name"`
+	Type         string  `json:"type"`
+	PricePerHour float64 `json:"price_per_hour"`
+	Capacity     int     `json:"capacity"`
+	ImgPath      string  `json:"img_path"`
+	CreatedAt    string  `json:"created_at"`
+	UpdatedAt    string  `json:"updated_at"`
 }

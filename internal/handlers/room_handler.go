@@ -18,6 +18,12 @@ func InitRoomHandler(e *echo.Group, dbConn *sql.DB) {
 	e.POST("/rooms", func(c echo.Context) error {
 		return CreateRoom(c, dbConn)
 	})
+	e.PUT("/rooms/:id", func(c echo.Context) error {
+		return UpdateRoom(c, dbConn)
+	})
+	e.DELETE("/rooms/:id", func(c echo.Context) error {
+		return DeleteRoom(c, dbConn)
+	})
 }
 
 // @Summary GetRooms retrieves a list of rooms with optional filters
@@ -90,9 +96,9 @@ func GetRooms(c echo.Context, db *sql.DB) error {
 	}
 	defer rows.Close()
 
-	var rooms []models.Room
+	var rooms []models.RoomResponse
 	for rows.Next() {
-		var room models.Room
+		var room models.RoomResponse
 		if err := rows.Scan(&room.ID, &room.Name, &room.Type, &room.PricePerHour, &room.Capacity, &room.ImgPath, &room.CreatedAt, &room.UpdatedAt); err != nil {
 			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
 				Message: "Failed to retrieve rooms: " + err.Error(),
@@ -147,7 +153,7 @@ func GetRooms(c echo.Context, db *sql.DB) error {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body models.CreateRoomRequest true "Room details"
+// @Param request body models.CURoomRequest true "Room details"
 // @Success 201 {object} utils.SuccessResponse{data=nil}
 // @Failure 400 {object} utils.ErrorResponse
 // @Failure 401 {object} utils.ErrorResponse
@@ -175,7 +181,7 @@ func CreateRoom(c echo.Context, db *sql.DB) error {
 	}
 
 	// ambil data dari request body
-	var room models.CreateRoomRequest
+	var room models.CURoomRequest
 	if err := c.Bind(&room); err != nil {
 		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
 			Message: "Invalid request body: " + err.Error(),
@@ -197,6 +203,142 @@ func CreateRoom(c echo.Context, db *sql.DB) error {
 	// kembalikan response dengan message
 	return c.JSON(http.StatusCreated, utils.SuccessResponse{
 		Message: "Room created successfully",
+		Data:    nil,
+	})
+}
+
+// @Summary UpdateRoom updates an existing room
+// @Description Update an existing room with the provided details
+// @Tags rooms
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Room ID"
+// @Param request body models.CURoomRequest true "Room details"
+// @Success 200 {object} utils.SuccessResponse{data=nil}
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /rooms/{id} [put]
+func UpdateRoom(c echo.Context, db *sql.DB) error {
+	// ambil claim token dari context
+	claims := c.Get("client").(jwt.MapClaims)
+
+	// ambil role dari klaim token
+	role, ok := claims["role"].(string)
+	// jika role bukan admin, kembalikan response unauthorized
+	if !ok || role != "admin" {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Unauthorized access",
+		})
+	}
+	// ambil status dari klaim token
+	status, ok := claims["status"].(string)
+	// jika status bukan active, kembalikan response unauthorized
+	if !ok || status != "active" {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Unauthorized access",
+		})
+	}
+
+	// ambil id dari parameter
+	id := c.Param("id")
+	// konversi id ke int
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid room ID: " + err.Error(),
+		})
+	}
+
+	// ambil data dari request body
+	var room models.CURoomRequest
+	if err := c.Bind(&room); err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
+	}
+	// validasi data
+	if room.Name == "" || room.Type == "" || room.PricePerHour <= 0 || room.Capacity <= 0 {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Name, type, price per hour, and capacity are required and must be valid",
+		})
+	}
+	// simpan data room ke database
+	_, err = db.Exec(`UPDATE rooms SET name = $1, type = $2, price_perhour = $3, capacity = $4, img_path = $5 WHERE rooms_id = $6`, room.Name, room.Type, room.PricePerHour, room.Capacity, room.ImgPath, idInt)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to update room: " + err.Error(),
+		})
+	}
+	// kembalikan response dengan message
+	return c.JSON(http.StatusOK, utils.SuccessResponse{
+		Message: "Room updated successfully",
+		Data:    nil,
+	})
+}
+
+// @Summary DeleteRoom deletes a room
+// @Description Delete a room with the provided ID
+// @Tags rooms
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Room ID"
+// @Success 200 {object} utils.SuccessResponse{data=nil}
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 404 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /rooms/{id} [delete]
+func DeleteRoom(c echo.Context, db *sql.DB) error {
+	// ambil claim token dari context
+	claims := c.Get("client").(jwt.MapClaims)
+
+	// ambil role dari klaim token
+	role, ok := claims["role"].(string)
+	// jika role bukan admin, kembalikan response unauthorized
+	if !ok || role != "admin" {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Unauthorized access",
+		})
+	}
+	// ambil status dari klaim token
+	status, ok := claims["status"].(string)
+	// jika status bukan active, kembalikan response unauthorized
+	if !ok || status != "active" {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Unauthorized access",
+		})
+	}
+
+	// ambil id dari parameter
+	id := c.Param("id")
+	// konversi id ke int
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid room ID: " + err.Error(),
+		})
+	}
+
+	// hapus data room dari database dan jika no row affected, kembalikan response not found
+	result, err := db.Exec(`DELETE FROM rooms WHERE rooms_id = $1`, idInt)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to delete room: " + err.Error(),
+		})
+	}
+	res, _ := result.RowsAffected()
+	if res == 0 {
+		return c.JSON(http.StatusNotFound, utils.ErrorResponse{
+			Message: "Room not found",
+		})
+	}
+
+	// kembalikan response dengan message
+	return c.JSON(http.StatusOK, utils.SuccessResponse{
+		Message: "Room deleted successfully",
 		Data:    nil,
 	})
 }

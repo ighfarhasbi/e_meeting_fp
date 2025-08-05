@@ -9,6 +9,7 @@ type Snacks struct {
 	Category string          `json:"category" db:"category"`
 }
 
+// bedanya di price harus float
 type SnacksResponse struct {
 	ID       int     `json:"id"`
 	Name     string  `json:"name"`
