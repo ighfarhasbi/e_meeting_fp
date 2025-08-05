@@ -7,40 +7,14 @@ type Users struct {
 	Role      string `json:"role" db:"role"`
 	Status    string `json:"status" db:"status"`
 	Language  string `json:"language" db:"language"`
-	ImgPath   string `json:"img_path" db:"img_path"`
-	CreatedAt string `json:"created_at" db:"created_at"`
-	UpdatedAt string `json:"updated_at" db:"updated_at"`
+	ImgPath   string `json:"imgUrl" db:"img_path"`
+	CreatedAt string `json:"createdAt" db:"created_at"`
+	UpdatedAt string `json:"updatedAt" db:"updated_at"`
 }
 
-type PasswordReset struct {
-	ID    int    `json:"id" db:"id"`
-	Token string `json:"token" db:"token"`
-}
-
-type RegisterUserRequest struct {
+type UpdateUserRequest struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type LoginUserRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type AccessToken struct {
-	AccessToken string `json:"access_token"`
-}
-
-type RefreshTokenRequest struct {
-	RefreshToken string `json:"refresh_token"`
-}
-
-type CheckEmailRequest struct {
-	Email string `json:"email"`
-}
-
-type ResetPasswordRequest struct {
-	NewPassword     string `json:"new_password"`
-	ConfirmPassword string `json:"confirm_password"`
+	Language string `json:"language"`
+	ImgPath  string `json:"imgUrl"`
 }

@@ -13,9 +13,11 @@ type RegisterResposnse struct {
 	Message string `json:"message"`
 }
 
-type LoginResponse struct {
-	Message      string `json:"message"`
-	Data         any    `json:"data"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+type TokenResponse struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+}
+
+type MultupleErrorResponse struct {
+	Errors []string `json:"massage"`
 }
