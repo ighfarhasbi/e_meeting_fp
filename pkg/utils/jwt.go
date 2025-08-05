@@ -7,13 +7,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GenerateJWTToken(username string, role string, status string) (string, string, error) {
+func GenerateJWTToken(id int, username string, role string, status string) (string, string, error) {
 	cfg := config.New() // Ambil JWT secret dari konfigurasi
 	if cfg.JWTSecret == "" {
 		return "", "", jwt.ErrInvalidKey
 	}
 	// Generate token jwt dengan klaim yang sesuai
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":       id,
 		"username": username,
 		"role":     role,
 		"status":   status,
@@ -27,6 +28,7 @@ func GenerateJWTToken(username string, role string, status string) (string, stri
 	}
 
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":       id,
 		"username": username,
 		"role":     role,
 		"status":   status,
@@ -65,6 +67,7 @@ func RefreshAccessToken(refreshToken string) (string, error) {
 	}
 
 	// Generate new access token
+	id := token.Claims.(jwt.MapClaims)["id"].(float64)
 	username := token.Claims.(jwt.MapClaims)["username"].(string)
 	role := token.Claims.(jwt.MapClaims)["role"].(string)
 	status := token.Claims.(jwt.MapClaims)["status"].(string)
@@ -77,6 +80,7 @@ func RefreshAccessToken(refreshToken string) (string, error) {
 
 	// hanya buat access token baru
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":       id,
 		"username": username,
 		"role":     role,
 		"status":   status,

@@ -79,7 +79,8 @@ func main() {
 	// initialize handlers
 	handlers.InitRoomHandler(group, conn)   // initialize room handler
 	handlers.InitSnacksHandler(group, conn) // initialize snacks handler
-	handlers.InitUserHandler(e, conn)       // initialize user handler
+	handlers.InitUserHandler(group, conn)   // initialize user handler
+	handlers.InitUserAuthHandler(e, conn)   // initialize user auth handler
 
 	// start the server
 	e.Logger.Fatal(e.Start(":" + cgf.Port))
