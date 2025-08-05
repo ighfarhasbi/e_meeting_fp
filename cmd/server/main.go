@@ -77,6 +77,7 @@ func main() {
 	group := e.Group("")
 	group.Use(middleware.JwtMiddleware)
 	// initialize handlers
+	handlers.InitReservationHandler(group, conn)
 	handlers.InitRoomHandler(group, conn)   // initialize room handler
 	handlers.InitSnacksHandler(group, conn) // initialize snacks handler
 	handlers.InitUserHandler(group, conn)   // initialize user handler
