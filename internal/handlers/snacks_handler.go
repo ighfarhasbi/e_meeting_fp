@@ -16,6 +16,16 @@ func InitSnacksHandler(e *echo.Group, dbConn *sql.DB) {
 	})
 }
 
+// @Summary GetSnacks retrieves a list of snacks
+// @Description Get a list of snacks available in the system
+// @Tags snacks
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} utils.SuccessResponse{data=[]models.Snacks}
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /snacks [get]
 func GetSnacks(c echo.Context, db *sql.DB) error {
 	// ambil daftar snacks dari database
 	rows, err := db.Query("SELECT snacks_id, name, price, category FROM snacks")
@@ -27,10 +37,10 @@ func GetSnacks(c echo.Context, db *sql.DB) error {
 	defer rows.Close()
 
 	// buat slice untuk menyimpan daftar snacks
-	var snacks []models.Snacks
+	var snacks []models.SnacksResponse
 	// iterasi melalui hasil query dan masukkan ke dalam slice
 	for rows.Next() {
-		var snack models.Snacks
+		var snack models.SnacksResponse
 		if err := rows.Scan(&snack.ID, &snack.Name, &snack.Price, &snack.Category); err != nil {
 			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
 				Message: "Gagal mengambil daftar snacks",

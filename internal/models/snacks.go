@@ -8,3 +8,10 @@ type Snacks struct {
 	Price    decimal.Decimal `json:"price" db:"price"`
 	Category string          `json:"category" db:"category"`
 }
+
+type SnacksResponse struct {
+	ID       int     `json:"id"`
+	Name     string  `json:"name"`
+	Price    float64 `json:"price"`
+	Category string  `json:"category"`
+}

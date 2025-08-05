@@ -21,3 +21,12 @@ type TokenResponse struct {
 type MultupleErrorResponse struct {
 	Errors []string `json:"massage"`
 }
+
+type ListResponse struct {
+	Message   string `json:"message"`
+	Data      any    `json:"data"`
+	Page      int    `json:"page"`
+	PageSize  int    `json:"pageSize"`
+	TotalPage int    `json:"totalPage"`
+	TotalData int    `json:"totalData"`
+}
