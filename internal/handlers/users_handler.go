@@ -107,6 +107,17 @@ func GetUserById(c echo.Context, db *sql.DB) error {
 // @Failure 500 {object} utils.ErrorResponse
 // @Router /users/{id} [put]
 func EditProfile(c echo.Context, db *sql.DB) error {
+	// ambil claim token dari context
+	claims := c.Get("client").(jwt.MapClaims)
+	// ambil user_id dari klaim token
+	userIDfloat, ok := claims["id"].(float64)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Invalid token claims",
+		})
+	}
+	userID := int(userIDfloat) // konversi ke int
+
 	// ambil parameter user_id dari path
 	id := c.Param("id")
 	// konversi id ke int
@@ -116,24 +127,7 @@ func EditProfile(c echo.Context, db *sql.DB) error {
 			Message: "Invalid user_id : " + err.Error(),
 		})
 	}
-	// ambil header Authorization
-	authHeader := c.Request().Header.Get("Authorization")
-	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-	// parse token untuk mendapatkan user_id
-	token, err := utils.VerifyToken(tokenStr)
-	if err != nil {
-		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
-			Message: "Invalid token : " + err.Error(),
-		})
-	}
-	// ambil user_id dari klaim token
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || claims["id"] == nil {
-		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
-			Message: "Invalid token claims",
-		})
-	}
-	userID := int(claims["id"].(float64))
+
 	// bandingkan user_id dari parameter dengan user_id dari token
 	if userID != idInt {
 		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
@@ -160,7 +154,7 @@ func EditProfile(c echo.Context, db *sql.DB) error {
 	}
 	// return error jika ada error validasi dalam bentuk array
 	if len(validationErrors) > 0 {
-		return c.JSON(http.StatusBadRequest, utils.MultupleErrorResponse{
+		return c.JSON(http.StatusBadRequest, utils.MultipleErrorResponse{
 			Errors: validationErrors,
 		})
 	}

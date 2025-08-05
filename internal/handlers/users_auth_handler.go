@@ -37,7 +37,7 @@ func InitUserAuthHandler(e *echo.Echo, dbConn *sql.DB) {
 // @Accept json
 // @Produce json
 // @Param user body models.RegisterUserRequest true "User registration data"
-// @Success 200 {object} utils.RegisterResposnse
+// @Success 200 {object} utils.SuccessResponse{data=nil}
 // @Failure 400 {object} utils.ErrorResponse
 // @Failure 500 {object} utils.ErrorResponse
 // @Router /register [post]

@@ -27,11 +27,15 @@ func JwtMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		// Verifikasi token
-		if _, err := utils.VerifyToken(tokenString); err != nil {
+		token, err := utils.VerifyToken(tokenString)
+		if err != nil {
 			return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
-				Message: "Invalid or expired token : " + err.Error(),
+				Message: "Invalid or expired token: " + err.Error(),
 			})
 		}
+
+		// masukkan token ke dalam context untuk digunakan di handler
+		c.Set("client", token.Claims)
 
 		return next(c)
 	}
