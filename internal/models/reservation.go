@@ -33,3 +33,19 @@ type CalculationResponse struct {
 	PersonalData PersonalDataCalculation `json:"personalData"`
 	Total        float64                 `json:"total"`
 }
+
+type ReservationRequest struct {
+	UserID      int               `json:"userID"`
+	Name        string            `json:"name"`
+	PhoneNumber string            `json:"phoneNumber"`
+	Company     string            `json:"company"`
+	Notes       string            `json:"notes"`
+	Rooms       []RoomReservation `json:"rooms"`
+}
+type RoomReservation struct {
+	ID           int    `json:"id"`
+	StartTime    string `json:"startTime"`
+	EndTime      string `json:"endTime"`
+	Participants int    `json:"participants"`
+	SnackID      int    `json:"snackID"`
+}

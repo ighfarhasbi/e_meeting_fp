@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-func StringToInt(s1, s2, s3, s4 string) (int, int, int, int, error) {
+func StringToInt(s1, s2, s3 string) (int, int, int, error) {
 	// looping konversi string ke int
-	var int1, int2, int3, int4 int
+	var int1, int2, int3 int
 	var err error
 	for i := range 4 {
 		switch i {
@@ -17,14 +17,12 @@ func StringToInt(s1, s2, s3, s4 string) (int, int, int, int, error) {
 			int2, err = strconv.Atoi(s2)
 		case 2:
 			int3, err = strconv.Atoi(s3)
-		case 3:
-			int4, err = strconv.Atoi(s4)
 		}
 		if err != nil {
-			return 0, 0, 0, 0, err
+			return 0, 0, 0, err
 		}
 	}
-	return int1, int2, int3, int4, nil
+	return int1, int2, int3, nil
 
 }
 
