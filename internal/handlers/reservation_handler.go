@@ -29,7 +29,7 @@ func InitReservationHandler(e *echo.Group, dbConn *sql.DB) {
 // @Param name query string true "Name"
 // @Param phone_number query string true "Phone number"
 // @Param company query string true "Company"
-// @Success 200 {object} utils.SuccessResponse{data=models.PersonalDataCalculation}
+// @Success 200 {object} utils.SuccessResponse{data=models.CalculationResponse}
 // @Failure 400 {object} utils.ErrorResponse
 // @Failure 500 {object} utils.ErrorResponse
 // @Router /reservations/calculation [get]
@@ -69,6 +69,41 @@ func ReservationCalculation(c echo.Context, db *sql.DB) error {
 	}
 	duration := utils.CalculateDuration(startTimeTime, endTimeTime)
 
+	// get room data dari database
+	rows := db.QueryRow("SELECT name, type, price_perhour, capacity, img_path FROM rooms WHERE rooms_id = $1", roomIDInt)
+	var room models.CURoomRequest
+	err = rows.Scan(&room.Name, &room.Type, &room.PricePerHour, &room.Capacity, &room.ImgPath)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to get room data: " + err.Error(),
+		})
+	}
+	// get snack data dari database
+	rows = db.QueryRow("SELECT snacks_id, name, price, category FROM snacks WHERE snacks_id = $1", snackIDInt)
+	var snack models.Snacks
+	err = rows.Scan(&snack.ID, &snack.Name, &snack.Price, &snack.Category)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to get snack data: " + err.Error(),
+		})
+	}
+
+	// validasi room capacity
+	if room.Capacity < participantsInt {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Room capacity is not enough",
+		})
+	}
+
+	// hitung subtotal snack
+	snackPrice, _ := (snack.Price).Float64() // konversi ke float dari decimal.Decimal
+	subTotalSnack := snackPrice * float64(participantsInt)
+	// hitung subtotal room
+	subTotalRoom := room.PricePerHour * float64(duration.Hours())
+
+	// hitung total
+	total := subTotalSnack + subTotalRoom
+
 	// siapkan response
 	var calculation models.CalculationResponse
 	// masukkan personal data
@@ -79,38 +114,25 @@ func ReservationCalculation(c echo.Context, db *sql.DB) error {
 	calculation.PersonalData.EndTime = endTime
 	calculation.PersonalData.Duration = int(duration.Hours())
 	calculation.PersonalData.Participants = participantsInt
+	calculation.Total = total
 
 	// masukkan rooms
 	calculation.Rooms = append(calculation.Rooms, models.RoomCalculation{
-		Name:          "Room 1",
-		Type:          "Meeting Room",
-		PricePerHour:  100000,
-		Capacity:      10,
-		ImgPath:       "https://example.com/room1.jpg",
-		SubTotalSnack: 400000,
-		SubTotalRoom:  100000,
+		Name:          room.Name,
+		Type:          room.Type,
+		PricePerHour:  room.PricePerHour,
+		Capacity:      room.Capacity,
+		ImgPath:       room.ImgPath,
+		SubTotalSnack: subTotalSnack,
+		SubTotalRoom:  subTotalRoom,
 		Snacks: models.SnacksCalculation{
-			ID:       1,
-			Category: "Snack",
-			Name:     "Snack 1",
-			Price:    100000,
+			ID:       snack.ID,
+			Category: snack.Category,
+			Name:     snack.Name,
+			Price:    snackPrice,
 		},
 	})
-	calculation.Rooms = append(calculation.Rooms, models.RoomCalculation{
-		Name:          "Room 2",
-		Type:          "Meeting Room",
-		PricePerHour:  100000,
-		Capacity:      10,
-		ImgPath:       "https://example.com/room2.jpg",
-		SubTotalSnack: 400000,
-		SubTotalRoom:  100000,
-		Snacks: models.SnacksCalculation{
-			ID:       2,
-			Category: "Snack",
-			Name:     "Snack 2",
-			Price:    100000,
-		},
-	})
+
 	return c.JSON(http.StatusOK, utils.SuccessResponse{
 		Message: "Success",
 		Data:    calculation,
