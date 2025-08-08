@@ -1,5 +1,7 @@
 package models
 
+import "github.com/google/uuid"
+
 type PersonalDataCalculation struct {
 	Name         string `json:"name"`
 	NoHp         string `json:"noHp"`
@@ -48,4 +50,31 @@ type RoomReservation struct {
 	EndTime      string `json:"endTime"`
 	Participants int    `json:"participants"`
 	SnackID      int    `json:"snackID"`
+}
+
+type TransactionResponse struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	PhoneNumber string    `json:"phoneNumber"`
+	Company     string    `json:"company"`
+	Total       float64   `json:"total"`
+	Status      string    `json:"status"`
+	CreatedAt   string    `json:"createdAt"`
+	UpdatedAt   string    `json:"updatedAt"`
+	Rooms       []Rooms   `json:"rooms"`
+}
+type Rooms struct {
+	ID            int     `json:"id"`
+	Name          string  `json:"name"`
+	Type          string  `json:"type"`
+	PricePerHour  float64 `json:"pricePerHour"`
+	SubTotalRoom  float64 `json:"subTotalRoom"`
+	SubTotalSnack float64 `json:"subTotalSnack"`
+	Snack         Snack   `json:"snack"`
+}
+type Snack struct {
+	ID any `json:"id"`
+	// Category string  `json:"category"`
+	// Name     string  `json:"name"`
+	// Price    float64 `json:"price"`
 }

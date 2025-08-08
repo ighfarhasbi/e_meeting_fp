@@ -21,10 +21,12 @@ package main
 import (
 	"e_meeting/config"
 	"e_meeting/internal/handlers"
-	"e_meeting/internal/middleware"
+	"e_meeting/internal/middlewareAuth"
 	"e_meeting/pkg/db"
 	"e_meeting/pkg/utils"
 	"net/http"
+
+	"github.com/labstack/echo/v4/middleware"
 
 	_ "e_meeting/docs"
 
@@ -59,23 +61,28 @@ func main() {
 		})
 	})
 	// set up CORS middleware
-	e.Use(echo.MiddlewareFunc(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Response().Header().Set(echo.HeaderAccessControlAllowOrigin, "*")
-			c.Response().Header().Set(echo.HeaderAccessControlAllowMethods, "GET, POST, PUT, DELETE, OPTIONS")
-			c.Response().Header().Set(echo.HeaderAccessControlAllowHeaders, "Content-Type, Authorization")
-			if c.Request().Method == http.MethodOptions {
-				return c.NoContent(http.StatusNoContent)
-			}
-			return next(c)
-		}
+	// e.Use(echo.MiddlewareFunc(func(next echo.HandlerFunc) echo.HandlerFunc {
+	// 	return func(c echo.Context) error {
+	// 		c.Response().Header().Set(echo.HeaderAccessControlAllowOrigin, "*")
+	// 		c.Response().Header().Set(echo.HeaderAccessControlAllowMethods, "GET, POST, PUT, DELETE, OPTIONS")
+	// 		c.Response().Header().Set(echo.HeaderAccessControlAllowHeaders, "Content-Type, Authorization")
+	// 		if c.Request().Method == http.MethodOptions {
+	// 			return c.NoContent(http.StatusNoContent)
+	// 		}
+	// 		return next(c)
+	// 	}
+	// }))
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS},
+		AllowHeaders: []string{echo.HeaderContentType, echo.HeaderAuthorization},
 	}))
 
 	// set up Swagger documentation
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	// apply JWT middleware
 	group := e.Group("")
-	group.Use(middleware.JwtMiddleware)
+	group.Use(middlewareAuth.JwtMiddleware)
 	// initialize handlers
 	handlers.InitReservationHandler(group, conn)
 	handlers.InitRoomHandler(group, conn)   // initialize room handler
