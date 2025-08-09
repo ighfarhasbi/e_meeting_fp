@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -22,6 +23,9 @@ func InitReservationHandler(e *echo.Group, dbConn *sql.DB) {
 	})
 	e.GET("/reservations/history", func(c echo.Context) error {
 		return HistoryReservations(c, dbConn)
+	})
+	e.GET("/reservations/:id", func(c echo.Context) error {
+		return GetReservationByID(c, dbConn)
 	})
 }
 
@@ -657,3 +661,158 @@ func HistoryReservations(c echo.Context, db *sql.DB) error {
 // 		TotalData: totalData,
 // 	})
 // }
+
+// @Summary Get reservation by ID
+// @Description Get reservation by ID
+// @Tags reservations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Reservation ID"
+// @Success 200 {object} utils.SuccessResponse{data=models.CalculationResponse}
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 404 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /reservations/{id} [get]
+func GetReservationByID(c echo.Context, db *sql.DB) error {
+	// ambil path parameter
+	id := c.Param("id")
+
+	// query data
+	row := db.QueryRow(`
+			SELECT t.tx_id, t.name, t.no_hp, t.company, t.total, t.status, t.created_at, t.updated_at,
+			r.rooms_id, dt.sub_total_snacks, dt.sub_total_price_room, dt.snacks_id, dt.start_time, dt.end_time, dt.participants, dt.price_snack_perpack,
+			r.name, r.type, r.price_perhour, r.capacity, r.img_path
+		FROM transactions t
+		JOIN detail_transaction dt ON t.tx_id = dt.tx_id
+		JOIN rooms r ON dt.rooms_id = r.rooms_id
+		WHERE t.tx_id = $1
+	`, id)
+	var (
+		txID          uuid.UUID
+		name          string
+		phone         string
+		company       string
+		total         float64
+		statusVal     string
+		createdAt     string
+		updatedAt     string
+		roomID        int
+		subTotalSnack float64
+		subTotalRoom  float64
+		snackID       any
+		startTime     string
+		endTime       string
+		participants  int
+		priceSnack    float64
+		roomName      string
+		roomType      string
+		pricePerHour  float64
+		imgPath       string
+		capacity      int
+	)
+	if err := row.Scan(
+		&txID,
+		&name,
+		&phone,
+		&company,
+		&total,
+		&statusVal,
+		&createdAt,
+		&updatedAt,
+		&roomID,
+		&subTotalSnack,
+		&subTotalRoom,
+		&snackID,
+		&startTime,
+		&endTime,
+		&participants,
+		&priceSnack,
+		&roomName,
+		&roomType,
+		&pricePerHour,
+		&capacity,
+		&imgPath,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, utils.ErrorResponse{
+				Message: "Transactions not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to get transactions data: " + err.Error(),
+		})
+	}
+
+	// handle kondisi snackID
+	if snackID == nil {
+		snackID = int64(0)
+	}
+
+	// konversi startTime dan endTime ke layout yang diinginkan
+	// Parse dari RFC3339 bawaan PostgreSQL
+	parsedTime, err := time.Parse(time.RFC3339, startTime)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid start time format (RFC3339 parse failed): " + err.Error(),
+		})
+	}
+
+	// Format ulang ke layout yang diminta fungsi konversi
+	startTime = parsedTime.Format("2006-01-02 15:04:05.000 -0700")
+
+	parsedTime, err = time.Parse(time.RFC3339, endTime)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid end time format (RFC3339 parse failed): " + err.Error(),
+		})
+	}
+	endTime = parsedTime.Format("2006-01-02 15:04:05.000 -0700")
+
+	// calculate duration
+	startTimeTime, err := utils.StringToTimestamptz(startTime)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid start time format: " + err.Error(),
+		})
+	}
+	endTimeTime, err := utils.StringToTimestamptz(endTime)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid end time format: " + err.Error(),
+		})
+	}
+	duration := utils.CalculateDuration(startTimeTime, endTimeTime)
+
+	// pisahkan data sesuai struct CalculationResponse
+	var data models.CalculationResponse
+	data.Rooms = append(data.Rooms, models.RoomCalculation{
+		Name:          roomName,
+		Type:          roomType,
+		PricePerHour:  pricePerHour,
+		SubTotalSnack: subTotalSnack,
+		SubTotalRoom:  subTotalRoom,
+		Capacity:      capacity,
+		ImgPath:       imgPath,
+		Snacks: models.SnacksCalculation{
+			ID:       int(snackID.(int64)),
+			Category: "",
+			Name:     "",
+			Price:    priceSnack,
+		},
+	})
+	data.PersonalData.Name = name
+	data.PersonalData.NoHp = phone
+	data.PersonalData.Company = company
+	data.PersonalData.StartTime = startTime
+	data.PersonalData.EndTime = endTime
+	data.PersonalData.Duration = int(duration.Hours())
+	data.PersonalData.Participants = participants
+	data.Total = total
+
+	return c.JSON(http.StatusOK, utils.SuccessResponse{
+		Message: "Success",
+		Data:    data,
+	})
+}
