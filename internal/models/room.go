@@ -33,3 +33,14 @@ type RoomResponse struct {
 	CreatedAt    string  `json:"createdAt"`
 	UpdatedAt    string  `json:"updatedAt"`
 }
+
+type RoomSchedule struct {
+	Name      string `json:"name"`
+	Status    string `json:"status"`
+	StartTime string `json:"startTime"`
+	EndTime   string `json:"endTime"`
+}
+type RoomScheduleResponse struct {
+	Schedule    []RoomSchedule `json:"schedule"`
+	TotalBooked int            `json:"totalBooked"`
+}
