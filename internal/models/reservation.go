@@ -78,3 +78,7 @@ type Snack struct {
 	// Name     string  `json:"name"`
 	// Price    float64 `json:"price"`
 }
+
+type StatusReservation struct {
+	Status string `json:"status"`
+}

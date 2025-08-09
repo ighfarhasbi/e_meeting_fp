@@ -27,6 +27,9 @@ func InitReservationHandler(e *echo.Group, dbConn *sql.DB) {
 	e.GET("/reservations/:id", func(c echo.Context) error {
 		return GetReservationByID(c, dbConn)
 	})
+	e.PATCH("/reservations/status/:id", func(c echo.Context) error {
+		return UpdateReservationStatus(c, dbConn)
+	})
 }
 
 // @Summary ReservationCalculation calculates the reservation
@@ -815,4 +818,75 @@ func GetReservationByID(c echo.Context, db *sql.DB) error {
 		Message: "Success",
 		Data:    data,
 	})
+}
+
+// @Summary UpdateReservationStatus updates the status of a reservation
+// @Description Update the status of a reservation with the provided ID
+// @Tags reservations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Reservation ID"
+// @Param status body models.StatusReservation true "Status to update"
+// @Success 200 {object} utils.SuccessResponse
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 404 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /reservations/status/{id} [patch]
+func UpdateReservationStatus(c echo.Context, db *sql.DB) error {
+	// ambil status dari payload
+	id := c.Param("id")
+	var status models.StatusReservation
+	if err := c.Bind(&status); err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid request body",
+		})
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to start transaction: " + err.Error(),
+		})
+	}
+	defer tx.Rollback()
+
+	// cek apakah t.created_at dan t.updated_at bernilai sama, jika beda maka status tidak boleh diubah
+	row := tx.QueryRow(`SELECT created_at, updated_at FROM transactions t WHERE t.tx_id = $1`, id)
+	var createdAt, updatedAt time.Time
+	if err := row.Scan(&createdAt, &updatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, utils.ErrorResponse{
+				Message: "Transactions not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to get transactions data: " + err.Error(),
+		})
+	}
+	if createdAt != updatedAt {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Status cannot be updated because the transaction has been processed",
+		})
+	}
+
+	// update status
+	_, err = tx.Exec(`UPDATE transactions SET status = $1 WHERE tx_id = $2`, status.Status, id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to update transaction status: " + err.Error(),
+		})
+	}
+
+	if err := tx.Commit(); err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to commit transaction: " + err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, utils.SuccessResponse{
+		Message: "Success",
+	})
+
 }
