@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+	"github.com/lib/pq"
 )
 
 func InitRoomHandler(e *echo.Group, dbConn *sql.DB) {
@@ -24,8 +25,11 @@ func InitRoomHandler(e *echo.Group, dbConn *sql.DB) {
 	e.DELETE("/rooms/:id", func(c echo.Context) error {
 		return DeleteRoom(c, dbConn)
 	})
-	e.GET("/rooms/schedule/:id/:date", func(c echo.Context) error {
+	e.GET("/rooms/:id/reservations/:date", func(c echo.Context) error {
 		return GetRoomSchedule(c, dbConn)
+	})
+	e.GET("/rooms/reservations", func(c echo.Context) error {
+		return GetRoomScheduleAdmin(c, dbConn)
 	})
 }
 
@@ -359,7 +363,7 @@ func DeleteRoom(c echo.Context, db *sql.DB) error {
 // @Failure 401 {object} utils.ErrorResponse
 // @Failure 404 {object} utils.ErrorResponse
 // @Failure 500 {object} utils.ErrorResponse
-// @Router /rooms/schedule/{id}/{date} [get]
+// @Router /rooms/{id}/reservations/{date} [get]
 func GetRoomSchedule(c echo.Context, db *sql.DB) error {
 	// ambil id dari parameter
 	id := c.Param("id")
@@ -373,11 +377,10 @@ func GetRoomSchedule(c echo.Context, db *sql.DB) error {
 	}
 
 	// ambil data room dari database yang difilter berdasarkan id dan status
-	rows, err := db.Query(`select r."name", t.status, dt.start_time, dt.end_time 
-			from rooms r
-			join detail_transaction dt on r.rooms_id = dt.rooms_id  
-			join transactions t on dt.tx_id = t.tx_id
-			where r.rooms_id = $1 and t.status != 'canceled' AND dt.start_time >= $2::date AND dt.start_time < ($2::date + INTERVAL '1 day')`,
+	rows, err := db.Query(`select t.status, dt.start_time, dt.end_time 
+			from transactions t
+			join detail_transaction dt on t.tx_id = dt.tx_id
+			where dt.rooms_id = $1 and t.status != 'canceled' AND dt.start_time >= $2::date AND dt.start_time < ($2::date + INTERVAL '1 day')`,
 		idInt, dateFilter)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
@@ -388,16 +391,27 @@ func GetRoomSchedule(c echo.Context, db *sql.DB) error {
 	var rooms []models.RoomSchedule
 	for rows.Next() {
 		var room models.RoomSchedule
-		if err := rows.Scan(&room.Name, &room.Status, &room.StartTime, &room.EndTime); err != nil {
+		if err := rows.Scan(&room.Status, &room.StartTime, &room.EndTime); err != nil {
 			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
 				Message: "Failed to scan room schedule: " + err.Error(),
 			})
 		}
 		rooms = append(rooms, room)
 	}
+
+	// ambil data nama room
+	var roomName string
+	err = db.QueryRow(`select name from rooms where rooms_id = $1`, idInt).Scan(&roomName)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to retrieve room name: " + err.Error(),
+		})
+	}
+
 	// count rows yang berhasil di dapat
 	count := len(rooms)
 	schedule := models.RoomScheduleResponse{
+		RoomName:    roomName,
 		Schedule:    rooms,
 		TotalBooked: count,
 	}
@@ -407,3 +421,274 @@ func GetRoomSchedule(c echo.Context, db *sql.DB) error {
 		Data:    schedule,
 	})
 }
+
+// @Summary GetRoomScheduleAdmin gets the schedule of a room
+// @Description Get the schedule of a room
+// @Tags rooms schedule
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param start_time query string false "Start time"
+// @Param end_time query string false "End time"
+// @Param page query int false "Page number"
+// @Param pageSize query int false "Number of items per page"
+// @Success 200 {object} utils.ListResponse{data=[]models.RoomScheduleAdminResponse}
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 404 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /rooms/reservations [get]
+func GetRoomScheduleAdmin(c echo.Context, db *sql.DB) error {
+	// Ambil role dari klaim token
+	claims := c.Get("client").(jwt.MapClaims)
+	role, ok := claims["role"].(string)
+	if !ok || role != "admin" {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Unauthorized access",
+		})
+	}
+
+	// Ambil query parameter
+	startTime := c.QueryParam("start_time")
+	endTime := c.QueryParam("end_time")
+	pageStr := c.QueryParam("page")
+	pageSizeStr := c.QueryParam("pageSize")
+
+	var page, pageSize int
+	var err error
+	if pageStr != "" {
+		if page, err = strconv.Atoi(pageStr); err != nil {
+			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+				Message: "Invalid page parameter",
+			})
+		}
+	} else {
+		page = 1
+	}
+	if pageSizeStr != "" {
+		if pageSize, err = strconv.Atoi(pageSizeStr); err != nil {
+			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+				Message: "Invalid pageSize parameter",
+			})
+		}
+	} else {
+		pageSize = 5
+	}
+	offset := (page - 1) * pageSize
+
+	// Hitung total room sesuai filter
+	var totalData int
+	countQuery := `
+		SELECT COUNT(DISTINCT r.rooms_id)
+		FROM detail_transaction dt
+		JOIN transactions t ON dt.tx_id = t.tx_id
+		JOIN rooms r ON dt.rooms_id = r.rooms_id
+		WHERE t.status != 'canceled'
+		AND ($1 = '' OR dt.start_time::date >= $1::date)
+		AND ($2 = '' OR dt.end_time::date <= $2::date)
+	`
+	if err := db.QueryRow(countQuery, startTime, endTime).Scan(&totalData); err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to count room schedule: " + err.Error(),
+		})
+	}
+
+	// Ambil daftar room sesuai pagination
+	roomQuery := `
+		SELECT DISTINCT r.rooms_id, r.name
+		FROM detail_transaction dt
+		JOIN transactions t ON dt.tx_id = t.tx_id
+		JOIN rooms r ON dt.rooms_id = r.rooms_id
+		WHERE t.status != 'canceled'
+		AND ($1 = '' OR dt.start_time::date >= $1::date)
+		AND ($2 = '' OR dt.end_time::date <= $2::date)
+		ORDER BY r.name
+		LIMIT $3 OFFSET $4
+	`
+	roomRows, err := db.Query(roomQuery, startTime, endTime, pageSize, offset)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to retrieve room list: " + err.Error(),
+		})
+	}
+	defer roomRows.Close()
+
+	var roomIDs []int
+	roomMap := make(map[int]models.RoomScheduleAdminResponse)
+	for roomRows.Next() {
+		var id int
+		var name string
+		if err := roomRows.Scan(&id, &name); err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to scan room list: " + err.Error(),
+			})
+		}
+		roomIDs = append(roomIDs, id)
+		roomMap[id] = models.RoomScheduleAdminResponse{
+			RoomName: name,
+			Schedule: []models.RoomScheduleAdmin{},
+		}
+	}
+
+	// Ambil semua schedule untuk room yang ada di halaman ini
+	if len(roomIDs) > 0 {
+		scheduleQuery := `
+			SELECT r.rooms_id, t.company, dt.start_time, dt.end_time, COALESCE(t.status::text, '') AS status
+			FROM detail_transaction dt
+			JOIN transactions t ON dt.tx_id = t.tx_id
+			JOIN rooms r ON dt.rooms_id = r.rooms_id
+			WHERE t.status != 'canceled'
+			AND r.rooms_id = ANY($1)
+			AND ($2 = '' OR dt.start_time::date >= $2::date)
+			AND ($3 = '' OR dt.end_time::date <= $3::date)
+			ORDER BY dt.start_time ASC
+		`
+		schedRows, err := db.Query(scheduleQuery, pq.Array(roomIDs), startTime, endTime)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to retrieve schedules: " + err.Error(),
+			})
+		}
+		defer schedRows.Close()
+
+		for schedRows.Next() {
+			var roomID int
+			var sch models.RoomScheduleAdmin
+			if err := schedRows.Scan(&roomID, &sch.Company, &sch.StartTime, &sch.EndTime, &sch.Status); err != nil {
+				return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+					Message: "Failed to scan schedule: " + err.Error(),
+				})
+			}
+			room := roomMap[roomID]
+			room.Schedule = append(room.Schedule, sch)
+			roomMap[roomID] = room
+		}
+	}
+
+	// Susun hasil akhir
+	var reservation []models.RoomScheduleAdminResponse
+	for _, v := range roomMap {
+		reservation = append(reservation, v)
+	}
+
+	totalPage := (totalData + pageSize - 1) / pageSize
+
+	return c.JSON(http.StatusOK, utils.ListResponse{
+		Message:   "Room schedule retrieved successfully",
+		Data:      reservation,
+		Page:      page,
+		PageSize:  pageSize,
+		TotalPage: totalPage,
+		TotalData: totalData,
+	})
+}
+
+// func GetRoomScheduleAdmin(c echo.Context, db *sql.DB) error {
+// 	// ambil role dari klaim token
+// 	claims := c.Get("client").(jwt.MapClaims)
+// 	role, ok := claims["role"].(string)
+// 	// jika role bukan admin, kembalikan response unauthorized
+// 	if !ok || role != "admin" {
+// 		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+// 			Message: "Unauthorized access",
+// 		})
+// 	}
+
+// 	// ambil query parameter
+// 	startTime := c.QueryParam("start_time")
+// 	endTime := c.QueryParam("end_time")
+// 	pageStr := c.QueryParam("page")
+// 	pageSizeStr := c.QueryParam("pageSize")
+
+// 	var page, pageSize int
+// 	var err error
+// 	if pageStr != "" {
+// 		if page, err = strconv.Atoi(pageStr); err != nil {
+// 			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+// 				Message: "Invalid page parameter",
+// 			})
+// 		}
+// 	} else {
+// 		page = 1 // Default to page 1 if not provided
+// 	}
+// 	if pageSizeStr != "" {
+// 		if pageSize, err = strconv.Atoi(pageSizeStr); err != nil {
+// 			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+// 				Message: "Invalid pageSize parameter",
+// 			})
+// 		}
+// 	} else {
+// 		pageSize = 5 // Default to 5 items per page if not provided
+// 	}
+// 	offset := (page - 1) * pageSize
+
+// 	// Hitung total data sesuai filter
+// 	var totalData int
+// 	countQuery := `
+// 		SELECT COUNT(DISTINCT r.rooms_id)
+// 		FROM detail_transaction dt
+// 		JOIN transactions t ON dt.tx_id = t.tx_id
+// 		JOIN rooms r ON dt.rooms_id = r.rooms_id
+// 		WHERE t.status != 'canceled'
+// 		AND ($1 = '' OR dt.start_time::date >= $1::date)
+//         AND ($2 = '' OR dt.end_time::date <= $2::date)
+// 	`
+// 	if err := db.QueryRow(countQuery, startTime, endTime).Scan(&totalData); err != nil {
+// 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+// 			Message: "Failed to count room schedule: " + err.Error(),
+// 		})
+// 	}
+
+// 	// Query data dengan filter & pagination
+// 	query := `
+// 		SELECT r.name, t.company, dt.start_time, dt.end_time
+// 		FROM detail_transaction dt
+// 		JOIN transactions t ON dt.tx_id = t.tx_id
+// 		JOIN rooms r ON dt.rooms_id = r.rooms_id
+// 		WHERE t.status != 'canceled'
+// 		AND ($1 = '' OR dt.start_time::date >= $1::date)
+//         AND ($2 = '' OR dt.end_time::date <= $2::date)
+// 		ORDER BY dt.start_time ASC
+// 		LIMIT $3 OFFSET $4
+// 	`
+// 	rows, err := db.Query(query, startTime, endTime, pageSize, offset)
+// 	if err != nil {
+// 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+// 			Message: "Failed to retrieve room schedule: " + err.Error(),
+// 		})
+// 	}
+// 	defer rows.Close()
+
+// 	// map untuk group jadwal berdasarkan roomName
+// 	roomMap := make(map[string][]models.RoomScheduleAdmin)
+
+// 	for rows.Next() {
+// 		var roomName string
+// 		var item models.RoomScheduleAdmin
+// 		if err := rows.Scan(&roomName, &item.Company, &item.StartTime, &item.EndTime); err != nil {
+// 			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+// 				Message: "Failed to scan room schedule: " + err.Error(),
+// 			})
+// 		}
+// 		roomMap[roomName] = append(roomMap[roomName], item)
+// 	}
+
+// 	var reservation []models.RoomScheduleAdminResponse
+// 	for name, schedule := range roomMap {
+// 		reservation = append(reservation, models.RoomScheduleAdminResponse{
+// 			RoomName: name,
+// 			Schedule: schedule,
+// 		})
+// 	}
+// 	totalPage := (totalData + pageSize - 1) / pageSize
+
+// 	// kembalikan response dengan data room
+// 	return c.JSON(http.StatusOK, utils.ListResponse{
+// 		Message:   "Room schedule retrieved successfully",
+// 		Data:      reservation,
+// 		Page:      page,
+// 		PageSize:  pageSize,
+// 		TotalPage: totalPage,
+// 		TotalData: totalData,
+// 	})
+// }
