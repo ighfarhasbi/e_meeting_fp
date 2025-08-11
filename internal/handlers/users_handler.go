@@ -175,6 +175,12 @@ func EditProfile(c echo.Context, db *sql.DB) error {
 	if request.Username == "" {
 		validationErrors = append(validationErrors, "Username cannot be empty")
 	}
+	// validasi password jika ada
+	if request.Password != "" {
+		if err := utils.ValidatePasswordCharacters(request.Password); err != nil {
+			validationErrors = append(validationErrors, "Password validation failed: "+err.Error())
+		}
+	}
 	// return error jika ada error validasi dalam bentuk array
 	if len(validationErrors) > 0 {
 		return c.JSON(http.StatusBadRequest, utils.MultipleErrorResponse{
@@ -191,13 +197,32 @@ func EditProfile(c echo.Context, db *sql.DB) error {
 		})
 	}
 	defer tx.Rollback() // rollback jika terjadi error
-	_, err = tx.Exec("UPDATE users SET username = $1, email = $2, language = $3, img_path = $4 WHERE users_id = $5",
-		request.Username, request.Email, request.Language, imgUrl, userID)
-	// ambil data user yang sudah diupdate
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
-			Message: "Failed to update user : " + err.Error(),
-		})
+	// query untuk jika request.password tidak kosong
+	if request.Password != "" {
+		// hash password
+		hashedPassword, err := utils.HashPassword(request.Password)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to hash password : " + err.Error(),
+			})
+		}
+		// update query
+		_, err = tx.Exec("UPDATE users SET username = $1, email = $2, language = $3, img_path = $4, password = $5 WHERE users_id = $6",
+			request.Username, request.Email, request.Language, imgUrl, hashedPassword, userID)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to update password : " + err.Error(),
+			})
+		}
+	} else if request.Password == "" {
+		// update query
+		_, err = tx.Exec("UPDATE users SET username = $1, email = $2, language = $3, img_path = $4 WHERE users_id = $5",
+			request.Username, request.Email, request.Language, imgUrl, userID)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to update user : " + err.Error(),
+			})
+		}
 	}
 	row := tx.QueryRow("SELECT users_id, username, email, role, status, language, img_path, created_at, updated_at FROM users WHERE users_id = $1", userID)
 	if err := row.Scan(&user.ID, &user.Username, &user.Email, &user.Role, &user.Status, &user.Language, &user.ImgPath, &user.CreatedAt, &user.UpdatedAt); err != nil {
