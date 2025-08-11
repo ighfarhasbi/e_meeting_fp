@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"e_meeting/internal/models"
 	"e_meeting/pkg/utils"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -200,8 +201,25 @@ func CreateRoom(c echo.Context, db *sql.DB) error {
 			Message: "Name, type, price per hour, and capacity are required and must be valid",
 		})
 	}
+
+	imgUrl := room.ImgPath
+	if imgUrl != "" {
+		// buat channel untuk menerima data string dan err dari func UploadFile
+		ch := make(chan models.UploadRequest)
+		defer close(ch)
+
+		// jalankan goroutine untuk upload file
+		go UploadFile(c, ch, room.ImgPath)
+
+		// ambil data dari channel
+		fileRequest := <-ch
+		fmt.Println("fileRequest ch: ", fileRequest.ImageURL)
+		imgUrl = fileRequest.ImageURL
+	}
+
 	// simpan data room ke database
-	_, err := db.Exec(`INSERT INTO rooms (name, type, price_perhour, capacity, img_path) VALUES ($1, $2, $3, $4, $5)`, room.Name, room.Type, room.PricePerHour, room.Capacity, room.ImgPath)
+	_, err := db.Exec(`INSERT INTO rooms (name, type, price_perhour, capacity, img_path) VALUES ($1, $2, $3, $4, $5)`,
+		room.Name, room.Type, room.PricePerHour, room.Capacity, imgUrl)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
 			Message: "Failed to create room: " + err.Error(),
@@ -271,8 +289,35 @@ func UpdateRoom(c echo.Context, db *sql.DB) error {
 			Message: "Name, type, price per hour, and capacity are required and must be valid",
 		})
 	}
+
+	// ambil data room image_path dari database
+	var dbImgPath string
+	err = db.QueryRow(`SELECT img_path FROM rooms WHERE rooms_id = $1`, idInt).Scan(&dbImgPath)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to get room image path: " + err.Error(),
+		})
+	}
+
+	// jika room image_path tidak sama dengan request image_path, upload file
+	imgUrl := dbImgPath
+	if dbImgPath != room.ImgPath {
+		// buat channel untuk menerima data string dan err dari func UploadFile
+		ch := make(chan models.UploadRequest)
+		defer close(ch)
+
+		// jalankan goroutine untuk upload file
+		go UploadFile(c, ch, room.ImgPath)
+
+		// ambil data dari channel
+		fileRequest := <-ch
+		fmt.Println("fileRequest ch: ", fileRequest.ImageURL)
+		imgUrl = fileRequest.ImageURL
+	}
+
 	// simpan data room ke database
-	_, err = db.Exec(`UPDATE rooms SET name = $1, type = $2, price_perhour = $3, capacity = $4, img_path = $5 WHERE rooms_id = $6`, room.Name, room.Type, room.PricePerHour, room.Capacity, room.ImgPath, idInt)
+	_, err = db.Exec(`UPDATE rooms SET name = $1, type = $2, price_perhour = $3, capacity = $4, img_path = $5 WHERE rooms_id = $6`,
+		room.Name, room.Type, room.PricePerHour, room.Capacity, imgUrl, idInt)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
 			Message: "Failed to update room: " + err.Error(),
