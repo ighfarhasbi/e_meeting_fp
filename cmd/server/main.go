@@ -84,12 +84,13 @@ func main() {
 	group := e.Group("")
 	group.Use(middlewareAuth.JwtMiddleware)
 	// initialize handlers
-	handlers.InitUploadHandler(group)
-	handlers.InitReservationHandler(group, conn)
-	handlers.InitRoomHandler(group, conn)   // initialize room handler
-	handlers.InitSnacksHandler(group, conn) // initialize snacks handler
-	handlers.InitUserHandler(group, conn)   // initialize user handler
-	handlers.InitUserAuthHandler(e, conn)   // initialize user auth handler
+	handlers.InitDashboardHandler(group, conn)   // initialize dashboard handler
+	handlers.InitUploadHandler(group)            // initialize upload handler
+	handlers.InitReservationHandler(group, conn) // initialize reservation handler
+	handlers.InitRoomHandler(group, conn)        // initialize room handler
+	handlers.InitSnacksHandler(group, conn)      // initialize snacks handler
+	handlers.InitUserHandler(group, conn)        // initialize user handler
+	handlers.InitUserAuthHandler(e, conn)        // initialize user auth handler
 
 	// start the server
 	e.Logger.Fatal(e.Start(":" + cgf.Port))
