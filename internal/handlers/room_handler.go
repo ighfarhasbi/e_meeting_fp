@@ -374,6 +374,20 @@ func DeleteRoom(c echo.Context, db *sql.DB) error {
 		})
 	}
 
+	// cek apakah room dengan id tersebut sudah punya transaksi
+	var count int
+	err = db.QueryRow(`SELECT COUNT(*) FROM detail_transaction WHERE rooms_id = $1`, idInt).Scan(&count)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to check room transactions: " + err.Error(),
+		})
+	}
+	if count > 0 {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Cannot delete room with transactions",
+		})
+	}
+
 	// hapus data room dari database dan jika no row affected, kembalikan response not found
 	result, err := db.Exec(`DELETE FROM rooms WHERE rooms_id = $1`, idInt)
 	if err != nil {
