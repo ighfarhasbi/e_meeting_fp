@@ -84,6 +84,7 @@ func main() {
 	group := e.Group("")
 	group.Use(middlewareAuth.JwtMiddleware)
 	// initialize handlers
+	handlers.InitUploadHandler(group)
 	handlers.InitReservationHandler(group, conn)
 	handlers.InitRoomHandler(group, conn)   // initialize room handler
 	handlers.InitSnacksHandler(group, conn) // initialize snacks handler

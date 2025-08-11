@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"e_meeting/internal/models"
 	"e_meeting/pkg/utils"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -141,6 +142,28 @@ func EditProfile(c echo.Context, db *sql.DB) error {
 			Message: "Invalid request body : " + err.Error(),
 		})
 	}
+	// cek apakah request.ImgPath sama dengan yang ada di database
+	imgrow := db.QueryRow("SELECT img_path FROM users WHERE users_id = $1", userID)
+	var dbImgPath string
+	if err := imgrow.Scan(&dbImgPath); err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to get user image path : " + err.Error(),
+		})
+	}
+	imgUrl := dbImgPath
+	if dbImgPath != request.ImgPath {
+		// buat channel untuk menerima data string dan err dari func UploadFile
+		ch := make(chan models.UploadRequest)
+		defer close(ch)
+
+		// jalankan goroutine untuk upload file
+		go UploadFile(c, ch, request.ImgPath)
+
+		// ambil data dari channel
+		fileRequest := <-ch
+		fmt.Println("fileRequest ch: ", fileRequest.ImageURL)
+		imgUrl = fileRequest.ImageURL
+	}
 
 	// list error
 	var validationErrors []string
@@ -169,7 +192,7 @@ func EditProfile(c echo.Context, db *sql.DB) error {
 	}
 	defer tx.Rollback() // rollback jika terjadi error
 	_, err = tx.Exec("UPDATE users SET username = $1, email = $2, language = $3, img_path = $4 WHERE users_id = $5",
-		request.Username, request.Email, request.Language, request.ImgPath, userID)
+		request.Username, request.Email, request.Language, imgUrl, userID)
 	// ambil data user yang sudah diupdate
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
