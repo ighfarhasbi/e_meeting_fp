@@ -94,6 +94,7 @@ func UploadFile(c echo.Context, ch chan models.UploadRequest, imgUrl string) err
 		ImageURL: imgUrl,
 	}
 
+	// ambil url dari .env untuk path file
 	srcPath := "temp/" + request.ImageURL                   // path file temp
 	ext := filepath.Ext(srcPath)                            // Mendapatkan ekstensi file
 	name := strings.TrimSuffix(filepath.Base(srcPath), ext) // Mendapatkan nama file

@@ -152,6 +152,7 @@ func EditProfile(c echo.Context, db *sql.DB) error {
 	}
 	imgUrl := dbImgPath
 	if dbImgPath != request.ImgPath {
+		// cek url dulu menggunakan url.Parse(rawURL)
 		// buat channel untuk menerima data string dan err dari func UploadFile
 		ch := make(chan models.UploadRequest)
 		defer close(ch)

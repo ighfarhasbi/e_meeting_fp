@@ -38,3 +38,16 @@ func StringToTimestamptz(input string) (time.Time, error) {
 func CalculateDuration(start, end time.Time) time.Duration {
 	return end.Sub(start)
 }
+
+func IsOverlapping(start1, end1 time.Time, startTimesDB, endTimesDB []time.Time) bool {
+	for i := range startTimesDB {
+		start2 := startTimesDB[i]
+		end2 := endTimesDB[i]
+
+		// Dua interval overlap jika start1 < end2 DAN start2 < end1
+		if start1.Before(end2) && start2.Before(end1) {
+			return true
+		}
+	}
+	return false
+}

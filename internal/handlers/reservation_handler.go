@@ -72,6 +72,25 @@ func ReservationCalculation(c echo.Context, db *sql.DB) error {
 		})
 	}
 
+	// ambil data startTime dan endTime di database untuk dibandingkan
+	// bookTimes, err := db.Query("SELECT start_time, end_time FROM detail_transaction dt JOIN transactions t ON dt.tx_id = t.tx_id WHERE rooms_id = $1 AND t.status != 'canceled'", roomIDInt)
+	// if err != nil {
+	// 	return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+	// 		Message: "Failed to retrieve reservation: " + err.Error(),
+	// 	})
+	// }
+	// var startTimeDB, endTimeDB []time.Time
+	// for bookTimes.Next() {
+	// 	var startTime, endTime time.Time
+	// 	if err := bookTimes.Scan(&startTime, &endTime); err != nil {
+	// 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+	// 			Message: "Failed to retrieve reservation: " + err.Error(),
+	// 		})
+	// 	}
+	// 	startTimeDB = append(startTimeDB, startTime)
+	// 	endTimeDB = append(endTimeDB, endTime)
+	// }
+
 	// konversi startTime dan endTime ke time.Time
 	startTimeTime, err := utils.StringToTimestamptz(startTime)
 	if err != nil {
@@ -86,6 +105,46 @@ func ReservationCalculation(c echo.Context, db *sql.DB) error {
 			Message: "Invalid end time",
 		})
 	}
+
+	// cek startTime dan endTime minimal hari ini dan waktu sekarang
+	if startTimeTime.Before(time.Now()) || endTimeTime.Before(time.Now()) {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Reservation time must be after current time",
+		})
+	}
+
+	var exists bool
+	err = db.QueryRow(`
+    SELECT EXISTS (
+        SELECT 1
+        FROM detail_transaction dt
+        JOIN transactions t ON dt.tx_id = t.tx_id
+        WHERE rooms_id = $1
+          AND t.status != 'canceled'
+          AND (dt.start_time, dt.end_time) OVERLAPS ($2, $3)
+    )
+	`, roomIDInt, startTimeTime, endTimeTime).Scan(&exists)
+
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to check overlap: " + err.Error(),
+		})
+	}
+
+	if exists {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Reservation time overlaps with existing reservation",
+		})
+	}
+
+	// // cek apakah interval startTime dan endTime beririsan dengan startTimeDB dan endTimeDB
+	// if utils.IsOverlapping(startTimeTime, endTimeTime, startTimeDB, endTimeDB) {
+	// 	return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+	// 		Message: "Reservation time overlaps with existing reservation",
+	// 	})
+	// }
+
+	// hitung durasi
 	duration := utils.CalculateDuration(startTimeTime, endTimeTime)
 
 	// get room data dari database
