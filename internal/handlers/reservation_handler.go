@@ -113,7 +113,7 @@ func ReservationCalculation(c echo.Context, db *sql.DB) error {
 		})
 	}
 
-	var exists bool
+	var overlaps bool
 	err = db.QueryRow(`
     SELECT EXISTS (
         SELECT 1
@@ -123,7 +123,7 @@ func ReservationCalculation(c echo.Context, db *sql.DB) error {
           AND t.status != 'canceled'
           AND (dt.start_time, dt.end_time) OVERLAPS ($2, $3)
     )
-	`, roomIDInt, startTimeTime, endTimeTime).Scan(&exists)
+	`, roomIDInt, startTimeTime, endTimeTime).Scan(&overlaps)
 
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
@@ -131,7 +131,7 @@ func ReservationCalculation(c echo.Context, db *sql.DB) error {
 		})
 	}
 
-	if exists {
+	if overlaps {
 		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
 			Message: "Reservation time overlaps with existing reservation",
 		})

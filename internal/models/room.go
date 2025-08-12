@@ -48,10 +48,11 @@ type RoomScheduleResponse struct {
 
 type RoomScheduleAdmin struct {
 	// Name      string `json:"name"`
-	Company   string `json:"company"`
-	StartTime string `json:"startTime"`
-	EndTime   string `json:"endTime"`
-	Status    string `json:"status"`
+	Company        string `json:"company"`
+	StartTime      string `json:"startTime"`
+	EndTime        string `json:"endTime"`
+	Status         string `json:"status"`
+	StatusProgress string `json:"statusProgress"`
 }
 type RoomScheduleAdminResponse struct {
 	RoomName string `json:"roomName"`

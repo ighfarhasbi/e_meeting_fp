@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
@@ -612,11 +613,27 @@ func GetRoomScheduleAdmin(c echo.Context, db *sql.DB) error {
 
 		for schedRows.Next() {
 			var roomID int
+			var startTime time.Time
+			var endTime time.Time
 			var sch models.RoomScheduleAdmin
-			if err := schedRows.Scan(&roomID, &sch.Company, &sch.StartTime, &sch.EndTime, &sch.Status); err != nil {
+			if err := schedRows.Scan(&roomID, &sch.Company, &startTime, &endTime, &sch.Status); err != nil {
 				return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
 					Message: "Failed to scan schedule: " + err.Error(),
 				})
+			}
+
+			// Format time.Time ke string sesuai format JSON
+			sch.StartTime = startTime.Format("2006-01-02 15:04:05")
+			sch.EndTime = endTime.Format("2006-01-02 15:04:05")
+
+			// Hitung StatusProgress
+			now := time.Now()
+			if now.After(endTime) {
+				sch.StatusProgress = "Done"
+			} else if now.After(startTime) && now.Before(endTime) {
+				sch.StatusProgress = "In Progress"
+			} else {
+				sch.StatusProgress = "Up Coming"
 			}
 			room := roomMap[roomID]
 			room.Schedule = append(room.Schedule, sch)
