@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"e_meeting/config"
 	"e_meeting/internal/models"
 	"e_meeting/pkg/utils"
 	"fmt"
@@ -95,11 +96,15 @@ func UploadFile(c echo.Context, ch chan models.UploadRequest, imgUrl string) err
 	}
 
 	// ambil url dari .env untuk path file
+	cfg := config.New()
+
 	srcPath := "temp/" + request.ImageURL                   // path file temp
 	ext := filepath.Ext(srcPath)                            // Mendapatkan ekstensi file
 	name := strings.TrimSuffix(filepath.Base(srcPath), ext) // Mendapatkan nama file
 
-	// Tambahkan timestamp
+	// Tambahkan timestamp dan domain
+	domain := cfg.Domain
+	fmt.Println(domain)
 	timestamp := time.Now().Format("20060102150405")            // YYYYMMDDHHMMSS
 	newFilename := fmt.Sprintf("%s_%s%s", name, timestamp, ext) // Nama file baru
 
@@ -119,9 +124,12 @@ func UploadFile(c echo.Context, ch chan models.UploadRequest, imgUrl string) err
 		})
 	}
 
+	// setelah file dipindahkan, tambahkan domain disini
+	publicURL := fmt.Sprintf("%s/%s", domain, dstPath)
+
 	// Kirim data path uploads ke channel
 	ch <- models.UploadRequest{
-		ImageURL: dstPath,
+		ImageURL: publicURL,
 	}
 
 	fmt.Println("File uploaded:", dstPath)
