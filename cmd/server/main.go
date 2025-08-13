@@ -43,14 +43,22 @@ func main() {
 	}
 
 	// load config
-	cgf := config.New()
+	cfg := config.New()
 
 	// connect to database
-	conn, err := db.NewPostgres(cgf.DBUrl)
+	conn, err := db.NewPostgres(cfg.DBUrl) // connect to postgres
 	if err != nil {
 		panic("Failed to connect to database: " + err.Error())
 	}
 	defer conn.Close()
+	redisConn, err := db.NewRedis(cfg.RedisUrl) // connect to redis
+	if err != nil {
+		panic("Failed to connect to redis: " + err.Error())
+	}
+	defer redisConn.Close()
+
+	// run worker reservation
+	go handlers.WorkerReservation(redisConn, conn)
 
 	// initialize echo framework
 	e := echo.New()
@@ -84,14 +92,14 @@ func main() {
 	group := e.Group("")
 	group.Use(middlewareAuth.JwtMiddleware)
 	// initialize handlers
-	handlers.InitDashboardHandler(group, conn)   // initialize dashboard handler
-	handlers.InitUploadHandler(group)            // initialize upload handler
-	handlers.InitReservationHandler(group, conn) // initialize reservation handler
-	handlers.InitRoomHandler(group, conn)        // initialize room handler
-	handlers.InitSnacksHandler(group, conn)      // initialize snacks handler
-	handlers.InitUserHandler(group, conn)        // initialize user handler
-	handlers.InitUserAuthHandler(e, conn)        // initialize user auth handler
+	handlers.InitDashboardHandler(group, conn)              // initialize dashboard handler
+	handlers.InitUploadHandler(group)                       // initialize upload handler
+	handlers.InitReservationHandler(group, conn, redisConn) // initialize reservation handler
+	handlers.InitRoomHandler(group, conn)                   // initialize room handler
+	handlers.InitSnacksHandler(group, conn)                 // initialize snacks handler
+	handlers.InitUserHandler(group, conn)                   // initialize user handler
+	handlers.InitUserAuthHandler(e, conn)                   // initialize user auth handler
 
 	// start the server
-	e.Logger.Fatal(e.Start(":" + cgf.Port))
+	e.Logger.Fatal(e.Start(":" + cfg.Port))
 }

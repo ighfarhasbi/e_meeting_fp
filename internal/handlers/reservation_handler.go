@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"e_meeting/internal/models"
 	"e_meeting/pkg/utils"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -12,14 +13,15 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/redis/go-redis/v9"
 )
 
-func InitReservationHandler(e *echo.Group, dbConn *sql.DB) {
+func InitReservationHandler(e *echo.Group, dbConn *sql.DB, rdb *redis.Client) {
 	e.GET("/reservations/calculation", func(c echo.Context) error {
 		return ReservationCalculation(c, dbConn)
 	})
 	e.POST("/reservations", func(c echo.Context) error {
-		return CreateReservation(c, dbConn)
+		return CreateReservation(c, rdb)
 	})
 	e.GET("/reservations/history", func(c echo.Context) error {
 		return HistoryReservations(c, dbConn)
@@ -113,6 +115,7 @@ func ReservationCalculation(c echo.Context, db *sql.DB) error {
 		})
 	}
 
+	// cek apakah startTime dan endTime beririsan dengan startTimeDB dan endTimeDB
 	var overlaps bool
 	err = db.QueryRow(`
     SELECT EXISTS (
@@ -234,142 +237,143 @@ func ReservationCalculation(c echo.Context, db *sql.DB) error {
 	})
 }
 
-// @Summary CreateReservation creates a new reservation
-// @Description Create a new reservation with the provided details
-// @Tags reservations
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body models.ReservationRequest true "Reservation details"
-// @Success 201 {object} utils.SuccessResponse{data=nil}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 401 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /reservations [post]
-func CreateReservation(c echo.Context, db *sql.DB) error {
-	// ambil claim token
-	claims := c.Get("client").(jwt.MapClaims)
-	// ambil id user
-	userIDfloat, ok := claims["id"].(float64)
-	if !ok {
-		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
-			Message: "Invalid token claims",
-		})
-	}
-	userIDInt := int(userIDfloat) // konversi ke int
+// Summary CreateReservation creates a new reservation
+// Description Create a new reservation with the provided details
+// Tags reservations
+// Accept json
+// Produce json
+// Security BearerAuth
+// Param request body models.ReservationRequest true "Reservation details"
+// Success 201 {object} utils.SuccessResponse{data=nil}
+// Sucess 202 {object} utils.SuccessResponse{data=nil}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 401 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /reservations [post]
+// func CreateReservation(c echo.Context, db *sql.DB) error {
+// 	// ambil claim token
+// 	claims := c.Get("client").(jwt.MapClaims)
+// 	// ambil id user
+// 	userIDfloat, ok := claims["id"].(float64)
+// 	if !ok {
+// 		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+// 			Message: "Invalid token claims",
+// 		})
+// 	}
+// 	userIDInt := int(userIDfloat) // konversi ke int
 
-	// ambil body request
-	var request models.ReservationRequest
-	if err := c.Bind(&request); err != nil {
-		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
-			Message: "Invalid request body",
-		})
-	}
+// 	// ambil body request
+// 	var request models.ReservationRequest
+// 	if err := c.Bind(&request); err != nil {
+// 		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+// 			Message: "Invalid request body",
+// 		})
+// 	}
 
-	// validasi data
-	if request.UserID != userIDInt {
-		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
-			Message: "Invalid user ID",
-		})
-	}
+// 	// validasi data
+// 	if request.UserID != userIDInt {
+// 		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+// 			Message: "Invalid user ID",
+// 		})
+// 	}
 
-	// mulai tx dari ambil data sampai transaksi selesai
-	tx, err := db.Begin()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
-			Message: "Failed to begin transaction: " + err.Error(),
-		})
-	}
-	defer tx.Rollback()
+// 	// mulai tx dari ambil data sampai transaksi selesai
+// 	tx, err := db.Begin()
+// 	if err != nil {
+// 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+// 			Message: "Failed to begin transaction: " + err.Error(),
+// 		})
+// 	}
+// 	defer tx.Rollback()
 
-	// ambil data snack dari database jika snack_id ada
-	var snackReq any
-	snackReq = request.Rooms[0].SnackID
-	fmt.Println("id snack: ", snackReq)
-	var snack models.Snacks
-	if snackReq != 0 {
-		row := tx.QueryRow("SELECT snacks_id, name, price, category FROM snacks WHERE snacks_id = $1", snackReq)
-		if err := row.Scan(&snack.ID, &snack.Name, &snack.Price, &snack.Category); err != nil {
-			if err == sql.ErrNoRows {
-				return c.JSON(http.StatusNotFound, utils.ErrorResponse{
-					Message: "Snack not found",
-				})
-			}
-			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
-				Message: "Failed to get snack data: " + err.Error(),
-			})
-		}
-	} else if snackReq == 0 {
-		snackReq = nil // set nil karena di db nullable
-	}
+// 	// ambil data snack dari database jika snack_id ada
+// 	var snackReq any
+// 	snackReq = request.Rooms[0].SnackID
+// 	fmt.Println("id snack: ", snackReq)
+// 	var snack models.Snacks
+// 	if snackReq != 0 {
+// 		row := tx.QueryRow("SELECT snacks_id, name, price, category FROM snacks WHERE snacks_id = $1", snackReq)
+// 		if err := row.Scan(&snack.ID, &snack.Name, &snack.Price, &snack.Category); err != nil {
+// 			if err == sql.ErrNoRows {
+// 				return c.JSON(http.StatusNotFound, utils.ErrorResponse{
+// 					Message: "Snack not found",
+// 				})
+// 			}
+// 			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+// 				Message: "Failed to get snack data: " + err.Error(),
+// 			})
+// 		}
+// 	} else if snackReq == 0 {
+// 		snackReq = nil // set nil karena di db nullable
+// 	}
 
-	// ambil data room dari database
-	var room models.CURoomRequest
-	row := tx.QueryRow("SELECT name, type, price_perhour, capacity, img_path FROM rooms WHERE rooms_id = $1", request.Rooms[0].ID)
-	if err := row.Scan(&room.Name, &room.Type, &room.PricePerHour, &room.Capacity, &room.ImgPath); err != nil {
-		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, utils.ErrorResponse{
-				Message: "Room not found",
-			})
-		}
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
-			Message: "Failed to get room data: " + err.Error(),
-		})
-	}
+// 	// ambil data room dari database
+// 	var room models.CURoomRequest
+// 	row := tx.QueryRow("SELECT name, type, price_perhour, capacity, img_path FROM rooms WHERE rooms_id = $1", request.Rooms[0].ID)
+// 	if err := row.Scan(&room.Name, &room.Type, &room.PricePerHour, &room.Capacity, &room.ImgPath); err != nil {
+// 		if err == sql.ErrNoRows {
+// 			return c.JSON(http.StatusNotFound, utils.ErrorResponse{
+// 				Message: "Room not found",
+// 			})
+// 		}
+// 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+// 			Message: "Failed to get room data: " + err.Error(),
+// 		})
+// 	}
 
-	// hitung durasi
-	startTimeTime, err := utils.StringToTimestamptz(request.Rooms[0].StartTime)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
-			Message: "Invalid start time format",
-		})
-	}
-	endTimeTime, err := utils.StringToTimestamptz(request.Rooms[0].EndTime)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
-			Message: "Invalid end time format",
-		})
-	}
-	duration := utils.CalculateDuration(startTimeTime, endTimeTime)
+// 	// hitung durasi
+// 	startTimeTime, err := utils.StringToTimestamptz(request.Rooms[0].StartTime)
+// 	if err != nil {
+// 		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+// 			Message: "Invalid start time format",
+// 		})
+// 	}
+// 	endTimeTime, err := utils.StringToTimestamptz(request.Rooms[0].EndTime)
+// 	if err != nil {
+// 		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+// 			Message: "Invalid end time format",
+// 		})
+// 	}
+// 	duration := utils.CalculateDuration(startTimeTime, endTimeTime)
 
-	// hitung subtotal
-	snackPrice, _ := (snack.Price).Float64()
-	subTotalSnack := snackPrice * float64(request.Rooms[0].Participants)
-	subTotalRoom := room.PricePerHour * float64(duration.Hours())
-	total := subTotalSnack + subTotalRoom
+// 	// hitung subtotal
+// 	snackPrice, _ := (snack.Price).Float64()
+// 	subTotalSnack := snackPrice * float64(request.Rooms[0].Participants)
+// 	subTotalRoom := room.PricePerHour * float64(duration.Hours())
+// 	total := subTotalSnack + subTotalRoom
 
-	// uuid generate
-	uuidTx := uuid.New().String()       // tx_id
-	uuidDetailTx := uuid.New().String() // detail_tx_id
+// 	// uuid generate
+// 	uuidTx := uuid.New().String()       // tx_id
+// 	uuidDetailTx := uuid.New().String() // detail_tx_id
 
-	// insert data ke tabel transaction
-	_, err = tx.Exec("INSERT INTO transactions (tx_id, users_id, name, no_hp, company, note, total) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-		uuidTx, request.UserID, request.Name, request.PhoneNumber, request.Company, request.Notes, total)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
-			Message: "Failed to insert transaction data: " + err.Error(),
-		})
-	}
-	// insert data ke tabel detail_transaction
-	_, err = tx.Exec("INSERT INTO detail_transaction (detail_tx_id, tx_id, rooms_id, start_time, end_time, participants, snacks_id, sub_total_snacks, sub_total_price_room, price_snack_perpack, price_room_perhour) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10 , $11)",
-		uuidDetailTx, uuidTx, request.Rooms[0].ID, startTimeTime, endTimeTime, request.Rooms[0].Participants, snackReq, subTotalSnack, subTotalRoom, snack.Price, room.PricePerHour)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
-			Message: "Failed to insert detail transaction data: " + err.Error(),
-		})
-	}
-	// commit tx
-	if err := tx.Commit(); err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
-			Message: "Failed to commit transaction: " + err.Error(),
-		})
-	}
+// 	// insert data ke tabel transaction
+// 	_, err = tx.Exec("INSERT INTO transactions (tx_id, users_id, name, no_hp, company, note, total) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+// 		uuidTx, request.UserID, request.Name, request.PhoneNumber, request.Company, request.Notes, total)
+// 	if err != nil {
+// 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+// 			Message: "Failed to insert transaction data: " + err.Error(),
+// 		})
+// 	}
+// 	// insert data ke tabel detail_transaction
+// 	_, err = tx.Exec("INSERT INTO detail_transaction (detail_tx_id, tx_id, rooms_id, start_time, end_time, participants, snacks_id, sub_total_snacks, sub_total_price_room, price_snack_perpack, price_room_perhour) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10 , $11)",
+// 		uuidDetailTx, uuidTx, request.Rooms[0].ID, startTimeTime, endTimeTime, request.Rooms[0].Participants, snackReq, subTotalSnack, subTotalRoom, snack.Price, room.PricePerHour)
+// 	if err != nil {
+// 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+// 			Message: "Failed to insert detail transaction data: " + err.Error(),
+// 		})
+// 	}
+// 	// commit tx
+// 	if err := tx.Commit(); err != nil {
+// 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+// 			Message: "Failed to commit transaction: " + err.Error(),
+// 		})
+// 	}
 
-	return c.JSON(http.StatusCreated, utils.SuccessResponse{
-		Message: "Success",
-		Data:    nil,
-	})
-}
+// 	return c.JSON(http.StatusCreated, utils.SuccessResponse{
+// 		Message: "Success",
+// 		Data:    nil,
+// 	})
+// }
 
 // @Summary HistoryReservations gets history reservation
 // @Description HistoryReservations gets history reservation
@@ -948,4 +952,166 @@ func UpdateReservationStatus(c echo.Context, db *sql.DB) error {
 		Message: "Success",
 	})
 
+}
+
+// API handler: push request ke antrean Redis
+// @Summary CreateReservation creates a new reservation
+// @Description Create a new reservation with the provided details
+// @Tags reservations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body models.ReservationRequest true "Reservation details"
+// @Success 202 {object} utils.SuccessResponse
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /reservations [post]
+func CreateReservation(c echo.Context, rdb *redis.Client) error {
+	// ambil claim token
+	claims := c.Get("client").(jwt.MapClaims)
+	userIDfloat, ok := claims["id"].(float64)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Invalid token claims",
+		})
+	}
+	userIDInt := int(userIDfloat)
+
+	// ambil body request
+	var request models.ReservationRequest
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid request body",
+		})
+	}
+
+	if request.UserID != userIDInt {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Invalid user ID",
+		})
+	}
+
+	// Serialize request
+	// menyiapkan data agar bisa di push ke antrean
+	data, err := json.Marshal(request) // marshal itu untuk mengubah struct menjadi json yang bisa dibaca oleh redis
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to serialize request: " + err.Error(),
+		})
+	}
+
+	// Push ke antrean Redis
+	err = rdb.RPush(c.Request().Context(), "reservation:queue", data).Err()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to push to queue: " + err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusAccepted, utils.SuccessResponse{
+		Message: "Reservation request queued",
+	})
+}
+
+// Worker processor: eksekusi logic reservasi
+func ProcessReservation(db *sql.DB, request models.ReservationRequest) error {
+	// mulai transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// sebelum ambil data,
+	// cek apakah startTime dan endTime beririsan dengan startTimeDB dan endTimeDB
+	startTime, err := utils.StringToTimestamptz(request.Rooms[0].StartTime)
+	if err != nil {
+		return fmt.Errorf("invalid start time format")
+	}
+	endTime, err := utils.StringToTimestamptz(request.Rooms[0].EndTime)
+	if err != nil {
+		return fmt.Errorf("invalid end time format")
+	}
+
+	var overlaps bool
+	err = tx.QueryRow(`
+    SELECT EXISTS (
+        SELECT 1
+        FROM detail_transaction dt
+        JOIN transactions t ON dt.tx_id = t.tx_id
+        WHERE rooms_id = $1
+          AND t.status != 'canceled'
+          AND (dt.start_time, dt.end_time) OVERLAPS ($2, $3)
+    )
+	`, request.Rooms[0].ID, startTime, endTime).Scan(&overlaps)
+
+	if err != nil {
+		return fmt.Errorf("check overlap: %w", err)
+	}
+
+	if overlaps {
+		return fmt.Errorf("room is already reserved")
+	}
+
+	// ambil data snack
+	var snack models.Snacks
+	if request.Rooms[0].SnackID != 0 {
+		row := tx.QueryRow("SELECT snacks_id, name, price, category FROM snacks WHERE snacks_id = $1", request.Rooms[0].SnackID)
+		if err := row.Scan(&snack.ID, &snack.Name, &snack.Price, &snack.Category); err != nil {
+			if err == sql.ErrNoRows {
+				return fmt.Errorf("snack not found")
+			}
+			return fmt.Errorf("get snack data: %w", err)
+		}
+	}
+
+	// ambil data room
+	var room models.CURoomRequest
+	row := tx.QueryRow("SELECT name, type, price_perhour, capacity, img_path FROM rooms WHERE rooms_id = $1", request.Rooms[0].ID)
+	if err := row.Scan(&room.Name, &room.Type, &room.PricePerHour, &room.Capacity, &room.ImgPath); err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("room not found")
+		}
+		return fmt.Errorf("get room data: %w", err)
+	}
+
+	// hitung durasi & total
+	duration := utils.CalculateDuration(startTime, endTime)
+
+	snackPrice, _ := (snack.Price).Float64()
+	subTotalSnack := snackPrice * float64(request.Rooms[0].Participants)
+	subTotalRoom := room.PricePerHour * float64(duration.Hours())
+	total := subTotalSnack + subTotalRoom
+
+	// generate UUID
+	uuidTx := uuid.New().String()
+	uuidDetailTx := uuid.New().String()
+
+	// insert transactions
+	_, err = tx.Exec(`INSERT INTO transactions (tx_id, users_id, name, no_hp, company, note, total) 
+					  VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		uuidTx, request.UserID, request.Name, request.PhoneNumber, request.Company, request.Notes, total)
+	if err != nil {
+		return fmt.Errorf("insert transaction: %w", err)
+	}
+
+	// insert detail_transaction
+	_, err = tx.Exec(`INSERT INTO detail_transaction 
+		(detail_tx_id, tx_id, rooms_id, start_time, end_time, participants, snacks_id, 
+		sub_total_snacks, sub_total_price_room, price_snack_perpack, price_room_perhour) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		uuidDetailTx, uuidTx, request.Rooms[0].ID, startTime, endTime,
+		request.Rooms[0].Participants, request.Rooms[0].SnackID,
+		subTotalSnack, subTotalRoom, snack.Price, room.PricePerHour)
+	if err != nil {
+		return fmt.Errorf("insert detail transaction: %w", err)
+	}
+
+	// commit
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
 }

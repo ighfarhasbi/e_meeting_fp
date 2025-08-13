@@ -13,6 +13,7 @@ type Config struct {
 	GmailPassword    string // untuk mengirim email
 	JWTResetPassword string // untuk reset password
 	Domain           string // domain untuk url image
+	RedisUrl         string // untuk redis
 }
 
 // New membaca konfigurasi dari environment
@@ -47,6 +48,11 @@ func New() *Config {
 		log.Fatal("DOMAIN is not set in env")
 	}
 
+	redisUrl := os.Getenv("REDIS_URL")
+	if redisUrl == "" {
+		log.Fatal("REDIS_URL is not set in env")
+	}
+
 	return &Config{
 		DBUrl:            dbUrl,
 		JWTSecret:        jwtSecret,
@@ -54,5 +60,6 @@ func New() *Config {
 		GmailPassword:    gmailPassword,
 		JWTResetPassword: jwtResetPassword,
 		Domain:           domain,
+		RedisUrl:         redisUrl,
 	}
 }
