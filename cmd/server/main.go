@@ -13,7 +13,7 @@ package main
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 // @schemes http
 
-// @host localhost:8080
+// @host localhost:8081
 // @BasePath /
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -24,7 +24,9 @@ import (
 	"e_meeting/internal/middlewareAuth"
 	"e_meeting/pkg/db"
 	"e_meeting/pkg/utils"
+	"log"
 	"net/http"
+	"os"
 
 	"github.com/labstack/echo/v4/middleware"
 
@@ -37,10 +39,19 @@ import (
 )
 
 func main() {
-	// load .env file
-	if err := godotenv.Load(); err != nil {
-		panic("Failed to load .env file")
+	// Jika APP_ENV=local, dijalankan manual saat run (APP_ENV=local go run cmd/server/main.go)
+	if os.Getenv("APP_ENV") == "local" {
+		err := godotenv.Load(".env.local")
+		if err != nil {
+			log.Fatalf("Error loading .env.local: %v", err)
+		}
 	}
+	// env := os.Getenv("APP_ENV")
+	// fmt.Println(env)
+	// // load .env file
+	// if err := godotenv.Load(".env.local"); err != nil {
+	// 	panic("Failed to load .env file")
+	// }
 
 	// load config
 	cfg := config.New()
