@@ -13,11 +13,11 @@ import (
 func main() {
 	apiURL := "http://localhost:8080/reservations"
 	// JWT tolen yang valid
-	token := "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTUxMzAxNDUsImlhdCI6MTc1NTA0Mzc0NSwiaWQiOjI0LCJyb2xlIjoiYWRtaW4iLCJzdGF0dXMiOiJhY3RpdmUiLCJ0eXBlIjoiYWNjZXNzIiwidXNlcm5hbWUiOiJhZG1pbjAyIn0.UEMsEEcMYWMGQcS2Ut0rPlPuHFvFX2kVixOKK3SaHQc"
+	token := "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTUyMzYzODAsImlhdCI6MTc1NTE0OTk4MCwiaWQiOjI1LCJyb2xlIjoiYWRtaW4iLCJzdGF0dXMiOiJhY3RpdmUiLCJ0eXBlIjoiYWNjZXNzIiwidXNlcm5hbWUiOiJhZG1pbmRvY2tlciJ9.eZIpSHVJUIFZrXelZmb1nk2whNYtGP8XRNrjzcCvins"
 
 	// siapkan payload
 	reqBody := models.ReservationRequest{
-		UserID:      24,
+		UserID:      25,
 		Name:        "User Test",
 		PhoneNumber: "081234567890",
 		Company:     "Test Company",

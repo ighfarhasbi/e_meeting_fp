@@ -1,4 +1,24 @@
 services:
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: e-meeting-migrate
+    entrypoint:
+      [
+        "migrate",
+        "-path",
+        "migration",
+        "-database",
+        "postgres://ighfarhasbiash@db:5432/meeting_rooms_fp?sslmode=disable",
+        "up",
+      ]
+    depends_on:
+      - db
+    networks:
+      - app-network
+    restart: "no" # hanya jalan sekali
+
   app:
     build:
       context: .
