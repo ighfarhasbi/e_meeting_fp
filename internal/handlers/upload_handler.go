@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -18,9 +19,6 @@ import (
 func InitUploadHandler(e *echo.Group) {
 	e.POST("/upload", func(c echo.Context) error {
 		return Upload(c)
-	})
-	e.POST("/upload/file", func(c echo.Context) error {
-		return UploadFile(c, make(chan models.UploadRequest), "")
 	})
 }
 
@@ -69,8 +67,13 @@ func Upload(c echo.Context) error {
 	}
 	defer src.Close()
 
+	// tambahkan timestamp di filename
+	name := strings.TrimSuffix(file.Filename, ext)
+	timestamp := time.Now().Format("20060102150405") // YYYYMMDDHHMMSS
+	newFilename := fmt.Sprintf("%s_%s%s", name, timestamp, ext)
+
 	// Destination
-	dst, err := os.Create("temp/" + file.Filename)
+	dst, err := os.Create("temp/" + newFilename)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
 			Message: "Invalid create file : " + err.Error(),
@@ -84,55 +87,53 @@ func Upload(c echo.Context) error {
 			Message: "Invalid copy file : " + err.Error(),
 		})
 	}
+
+	// tambahkan nama domain di filename
+	domain := config.New().Domain
+	fileName := domain + "/temp/" + newFilename
+
 	return c.JSON(http.StatusOK, utils.SuccessResponse{
 		Message: "success upload file to temp",
-		Data:    file.Filename,
+		Data:    fileName,
 	})
 }
 
-func UploadFile(c echo.Context, ch chan models.UploadRequest, imgUrl string) error {
+func UploadFile(c echo.Context, imgUrl string) (models.UploadRequest, error) {
 	request := models.UploadRequest{
 		ImageURL: imgUrl,
 	}
 
 	// ambil url dari .env untuk path file
-	cfg := config.New()
+	// cfg := config.New()
+	// domain := cfg.Domain
 
-	srcPath := "temp/" + request.ImageURL                   // path file temp
-	ext := filepath.Ext(srcPath)                            // Mendapatkan ekstensi file
-	name := strings.TrimSuffix(filepath.Base(srcPath), ext) // Mendapatkan nama file
+	// ambil fileName dari request
+	fileName := path.Base(request.ImageURL)
 
-	// Tambahkan timestamp dan domain
-	domain := cfg.Domain
-	fmt.Println(domain)
-	timestamp := time.Now().Format("20060102150405")            // YYYYMMDDHHMMSS
-	newFilename := fmt.Sprintf("%s_%s%s", name, timestamp, ext) // Nama file baru
+	srcPath := "temp/" + fileName // path file temp
+	// validasi fileName sama dengan yang ada di folder temp
+	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+		return models.UploadRequest{ImageURL: ""}, fmt.Errorf("file not found in temp folder")
+	} else if err != nil {
+		return models.UploadRequest{ImageURL: ""}, fmt.Errorf("error checking file: %v", err)
+	}
 
-	dstPath := filepath.Join("uploads", newFilename) // path file uploads
+	dstPath := filepath.Join("uploads", fileName)
 
 	// Pastikan folder uploads ada
 	if err := os.MkdirAll("uploads", os.ModePerm); err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
-			Message: "Failed to create uploads folder: " + err.Error(),
-		})
+		return models.UploadRequest{ImageURL: ""}, fmt.Errorf("error creating uploads folder: %v", err)
 	}
 
 	// Pindahkan file dari temp ke uploads
 	if err := os.Rename(srcPath, dstPath); err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
-			Message: "Failed to move file: " + err.Error(),
-		})
+		return models.UploadRequest{ImageURL: ""}, fmt.Errorf("error moving file: %v", err)
 	}
 
 	// setelah file dipindahkan, tambahkan domain disini
-	publicURL := fmt.Sprintf("%s/%s", domain, dstPath)
-
-	// Kirim data path uploads ke channel
-	ch <- models.UploadRequest{
-		ImageURL: publicURL,
-	}
+	// publicURL := fmt.Sprintf("%s/%s", domain, dstPath)
 
 	fmt.Println("File uploaded:", dstPath)
 
-	return nil
+	return request, nil
 }

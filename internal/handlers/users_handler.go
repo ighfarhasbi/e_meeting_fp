@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"database/sql"
+	"e_meeting/config"
 	"e_meeting/internal/models"
 	"e_meeting/pkg/utils"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -152,18 +154,37 @@ func EditProfile(c echo.Context, db *sql.DB) error {
 	}
 	imgUrl := dbImgPath
 	if dbImgPath != request.ImgPath {
-		// cek url dulu menggunakan url.Parse(rawURL)
-		// buat channel untuk menerima data string dan err dari func UploadFile
-		ch := make(chan models.UploadRequest)
-		defer close(ch)
+		domain := config.New().Domain
 
-		// jalankan goroutine untuk upload file
-		go UploadFile(c, ch, request.ImgPath)
+		// validasi url
+		parsedURL, err := url.Parse(request.ImgPath)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+				Message: "Invalid URL: " + err.Error(),
+			})
+		}
+
+		// ambil baseDomain dari request
+		baseDomain := parsedURL.Scheme + "://" + parsedURL.Host
+
+		// validasi baseDomain
+		if baseDomain != domain {
+			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+				Message: "Invalid base domain: " + baseDomain,
+			})
+		}
+
+		// pindahkan file dari temp ke uploads
+		data, err := UploadFile(c, request.ImgPath)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to upload file: " + err.Error(),
+			})
+		}
 
 		// ambil data dari channel
-		fileRequest := <-ch
-		fmt.Println("fileRequest ch: ", fileRequest.ImageURL)
-		imgUrl = fileRequest.ImageURL
+		fmt.Println("fileRequest: ", data)
+		imgUrl = data.ImageURL
 	}
 
 	// list error
