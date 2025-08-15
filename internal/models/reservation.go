@@ -49,7 +49,7 @@ type RoomReservation struct {
 	StartTime    string `json:"startTime"`
 	EndTime      string `json:"endTime"`
 	Participants int    `json:"participants"`
-	SnackID      int    `json:"snackID"`
+	SnackID      any    `json:"snackID"`
 }
 
 type TransactionResponse struct {
