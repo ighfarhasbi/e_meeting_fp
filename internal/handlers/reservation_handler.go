@@ -115,6 +115,13 @@ func ReservationCalculation(c echo.Context, db *sql.DB) error {
 		})
 	}
 
+	// cek apakah startTime lebih besar atau sama dengan endTime
+	if !startTimeTime.Before(endTimeTime) {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Start time must be before end time",
+		})
+	}
+
 	// cek apakah startTime dan endTime beririsan dengan startTimeDB dan endTimeDB
 	var overlaps bool
 	err = db.QueryRow(`
@@ -1059,6 +1066,11 @@ func ProcessReservation(db *sql.DB, request models.ReservationRequest) error {
 
 	if overlaps {
 		return fmt.Errorf("room is already reserved")
+	}
+
+	// cek apakah startTime lebih besar atau sama dengan endTime
+	if !startTime.Before(endTime) {
+		return fmt.Errorf("start time must be before end time")
 	}
 
 	// ambil data snack
