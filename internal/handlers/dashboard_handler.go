@@ -45,28 +45,32 @@ func GetDashboardCalculation(c echo.Context, db *sql.DB) error {
 	var totalOmzet float64
 	err := db.QueryRow("SELECT SUM(total) FROM transactions WHERE status = 'paid'::tx_status_enum").Scan(&totalOmzet)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{Message: "Failed to count transactions: " + err.Error()})
+		totalOmzet = 0
+		// return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{Message: "Failed to count transactions: " + err.Error()})
 	}
 
 	// hitung total transaksi
 	var totalTransactions int
 	err = db.QueryRow("SELECT COUNT(*) FROM transactions WHERE status = 'paid'::tx_status_enum").Scan(&totalTransactions)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{Message: "Failed to count transactions: " + err.Error()})
+		totalTransactions = 0
+		// return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{Message: "Failed to count transactions: " + err.Error()})
 	}
 
 	// hitung total room
 	var totalRooms int
 	err = db.QueryRow("SELECT COUNT(*) FROM rooms").Scan(&totalRooms)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{Message: "Failed to count rooms: " + err.Error()})
+		totalRooms = 0
+		// return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{Message: "Failed to count rooms: " + err.Error()})
 	}
 
 	// hitung total participant di tabel detail_transaction yang statusnya sudah paid di tabel transactions
 	var totalParticipants int
 	err = db.QueryRow("SELECT SUM(participants) FROM detail_transaction dt JOIN transactions t ON dt.tx_id = t.tx_id WHERE t.status = 'paid'::tx_status_enum").Scan(&totalParticipants)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{Message: "Failed to count participants: " + err.Error()})
+		totalParticipants = 0
+		// return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{Message: "Failed to count participants: " + err.Error()})
 	}
 
 	// hitung total transaksi semua room
@@ -78,9 +82,10 @@ func GetDashboardCalculation(c echo.Context, db *sql.DB) error {
             WHERE t.status = 'paid'::tx_status_enum
         `).Scan(&totalTransactionsAll)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
-			Message: "Failed to count all transactions: " + err.Error(),
-		})
+		totalTransactionsAll = 0
+		// return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+		// 	Message: "Failed to count all transactions: " + err.Error(),
+		// })
 	}
 
 	// ambil data per room (jumlah transaksi dan omzet)
@@ -130,6 +135,15 @@ func GetDashboardCalculation(c echo.Context, db *sql.DB) error {
 		TotalReservation: totalTransactions,
 		TotalOmzet:       totalOmzet,
 		Rooms:            rooms,
+	}
+	if rooms == nil {
+		result = models.Dashboard{
+			TotalRoom:        totalRooms,
+			TotalVisitor:     totalParticipants,
+			TotalReservation: totalTransactions,
+			TotalOmzet:       totalOmzet,
+			Rooms:            []models.RoomsDashboard{},
+		}
 	}
 
 	return c.JSON(http.StatusOK, utils.SuccessResponse{
