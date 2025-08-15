@@ -747,14 +747,17 @@ func GetReservationByID(c echo.Context, db *sql.DB) error {
 
 	// query data
 	row := db.QueryRow(`
-			SELECT t.tx_id, t.name, t.no_hp, t.company, t.total, t.status, t.created_at, t.updated_at,
-			r.rooms_id, dt.sub_total_snacks, dt.sub_total_price_room, dt.snacks_id, dt.start_time, dt.end_time, dt.participants, dt.price_snack_perpack,
-			r.name, r.type, r.price_perhour, r.capacity, r.img_path
-		FROM transactions t
-		JOIN detail_transaction dt ON t.tx_id = dt.tx_id
-		JOIN rooms r ON dt.rooms_id = r.rooms_id
-		WHERE t.tx_id = $1
-	`, id)
+	SELECT t.tx_id, t.name, t.no_hp, t.company, t.total, t.status, t.created_at, t.updated_at,
+		r.rooms_id, dt.sub_total_snacks, dt.sub_total_price_room, dt.snacks_id, dt.start_time, dt.end_time, dt.participants, dt.price_snack_perpack,
+		r.name, r.type, r.price_perhour, r.capacity, r.img_path,
+		s.name AS snack_name, 
+		s.category AS snack_category
+	FROM transactions t
+	JOIN detail_transaction dt ON t.tx_id = dt.tx_id
+	JOIN rooms r ON dt.rooms_id = r.rooms_id
+	LEFT JOIN snacks s on dt.snacks_id = s.snacks_id
+	WHERE t.tx_id = $1
+`, id)
 	var (
 		txID          uuid.UUID
 		name          string
@@ -777,6 +780,8 @@ func GetReservationByID(c echo.Context, db *sql.DB) error {
 		pricePerHour  float64
 		imgPath       string
 		capacity      int
+		snackName     sql.NullString
+		snackCategory sql.NullString
 	)
 	if err := row.Scan(
 		&txID,
@@ -800,6 +805,8 @@ func GetReservationByID(c echo.Context, db *sql.DB) error {
 		&pricePerHour,
 		&capacity,
 		&imgPath,
+		&snackName,
+		&snackCategory,
 	); err != nil {
 		if err == sql.ErrNoRows {
 			return c.JSON(http.StatusNotFound, utils.ErrorResponse{
@@ -863,8 +870,8 @@ func GetReservationByID(c echo.Context, db *sql.DB) error {
 		ImgPath:       imgPath,
 		Snacks: models.SnacksCalculation{
 			ID:       int(snackID.(int64)),
-			Category: "",
-			Name:     "",
+			Category: snackCategory.String,
+			Name:     snackName.String,
 			Price:    priceSnack,
 		},
 	})
