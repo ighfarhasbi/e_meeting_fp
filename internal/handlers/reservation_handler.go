@@ -1074,9 +1074,9 @@ func ProcessReservation(db *sql.DB, request models.ReservationRequest) error {
 	}
 
 	// ambil data snack
-	snackInt := int(request.Rooms[0].SnackID.(float64))
+	// snackInt := int(request.Rooms[0].SnackID.(float64))
 	var snack models.Snacks
-	if snackInt != 0 {
+	if *request.Rooms[0].SnackID != 0 {
 		row := tx.QueryRow("SELECT snacks_id, name, price, category FROM snacks WHERE snacks_id = $1", request.Rooms[0].SnackID)
 		if err := row.Scan(&snack.ID, &snack.Name, &snack.Price, &snack.Category); err != nil {
 			if err == sql.ErrNoRows {
@@ -1084,7 +1084,7 @@ func ProcessReservation(db *sql.DB, request models.ReservationRequest) error {
 			}
 			return fmt.Errorf("get snack data: %w", err)
 		}
-	} else if snackInt == 0 {
+	} else if *request.Rooms[0].SnackID == 0 {
 		request.Rooms[0].SnackID = nil // set nil karena di db nullable
 	}
 

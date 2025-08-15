@@ -16,6 +16,7 @@ func main() {
 	token := "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTUyMzYzODAsImlhdCI6MTc1NTE0OTk4MCwiaWQiOjI1LCJyb2xlIjoiYWRtaW4iLCJzdGF0dXMiOiJhY3RpdmUiLCJ0eXBlIjoiYWNjZXNzIiwidXNlcm5hbWUiOiJhZG1pbmRvY2tlciJ9.eZIpSHVJUIFZrXelZmb1nk2whNYtGP8XRNrjzcCvins"
 
 	// siapkan payload
+	snackID := 2
 	reqBody := models.ReservationRequest{
 		UserID:      25,
 		Name:        "User Test",
@@ -25,7 +26,7 @@ func main() {
 		Rooms: []models.RoomReservation{
 			{
 				ID:           1,
-				SnackID:      2,
+				SnackID:      &snackID,
 				StartTime:    "2025-08-14 09:00:00.000 +0700",
 				EndTime:      "2025-08-14 11:00:00.000 +0700",
 				Participants: 5,
