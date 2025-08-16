@@ -65,7 +65,7 @@ coverage.out
 # PostgreSQL or Redis data (if dumped or temporarily stored)
 *.dump
 *.rdb
-*.sql
+#*.sql
 
 # Optional: Swagger UI generated assets (if generated manually)
 swaggerui/
