@@ -1,4 +1,4 @@
-package middleware
+package middlewareAuth
 
 import (
 	"e_meeting/pkg/utils"

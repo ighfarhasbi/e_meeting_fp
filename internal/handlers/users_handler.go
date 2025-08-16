@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"database/sql"
+	"e_meeting/config"
 	"e_meeting/internal/models"
 	"e_meeting/pkg/utils"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -141,6 +144,48 @@ func EditProfile(c echo.Context, db *sql.DB) error {
 			Message: "Invalid request body : " + err.Error(),
 		})
 	}
+	// cek apakah request.ImgPath sama dengan yang ada di database
+	imgrow := db.QueryRow("SELECT img_path FROM users WHERE users_id = $1", userID)
+	var dbImgPath string
+	if err := imgrow.Scan(&dbImgPath); err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to get user image path : " + err.Error(),
+		})
+	}
+	imgUrl := dbImgPath
+	if dbImgPath != request.ImgPath {
+		domain := config.New().Domain
+
+		// validasi url
+		parsedURL, err := url.Parse(request.ImgPath)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+				Message: "Invalid URL: " + err.Error(),
+			})
+		}
+
+		// ambil baseDomain dari request
+		baseDomain := parsedURL.Scheme + "://" + parsedURL.Host
+
+		// validasi baseDomain
+		if baseDomain != domain {
+			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+				Message: "Invalid base domain: " + baseDomain,
+			})
+		}
+
+		// pindahkan file dari temp ke uploads
+		data, err := UploadFile(c, request.ImgPath)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to upload file: " + err.Error(),
+			})
+		}
+
+		// ambil data dari channel
+		fmt.Println("fileRequest: ", data)
+		imgUrl = data.ImageURL
+	}
 
 	// list error
 	var validationErrors []string
@@ -151,6 +196,12 @@ func EditProfile(c echo.Context, db *sql.DB) error {
 	// validasi username apabila kosong
 	if request.Username == "" {
 		validationErrors = append(validationErrors, "Username cannot be empty")
+	}
+	// validasi password jika ada
+	if request.Password != "" {
+		if err := utils.ValidatePasswordCharacters(request.Password); err != nil {
+			validationErrors = append(validationErrors, "Password validation failed: "+err.Error())
+		}
 	}
 	// return error jika ada error validasi dalam bentuk array
 	if len(validationErrors) > 0 {
@@ -168,13 +219,32 @@ func EditProfile(c echo.Context, db *sql.DB) error {
 		})
 	}
 	defer tx.Rollback() // rollback jika terjadi error
-	_, err = tx.Exec("UPDATE users SET username = $1, email = $2, language = $3, img_path = $4 WHERE users_id = $5",
-		request.Username, request.Email, request.Language, request.ImgPath, userID)
-	// ambil data user yang sudah diupdate
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
-			Message: "Failed to update user : " + err.Error(),
-		})
+	// query untuk jika request.password tidak kosong
+	if request.Password != "" {
+		// hash password
+		hashedPassword, err := utils.HashPassword(request.Password)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to hash password : " + err.Error(),
+			})
+		}
+		// update query
+		_, err = tx.Exec("UPDATE users SET username = $1, email = $2, language = $3, img_path = $4, password = $5 WHERE users_id = $6",
+			request.Username, request.Email, request.Language, imgUrl, hashedPassword, userID)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to update password : " + err.Error(),
+			})
+		}
+	} else if request.Password == "" {
+		// update query
+		_, err = tx.Exec("UPDATE users SET username = $1, email = $2, language = $3, img_path = $4 WHERE users_id = $5",
+			request.Username, request.Email, request.Language, imgUrl, userID)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to update user : " + err.Error(),
+			})
+		}
 	}
 	row := tx.QueryRow("SELECT users_id, username, email, role, status, language, img_path, created_at, updated_at FROM users WHERE users_id = $1", userID)
 	if err := row.Scan(&user.ID, &user.Username, &user.Email, &user.Role, &user.Status, &user.Language, &user.ImgPath, &user.CreatedAt, &user.UpdatedAt); err != nil {

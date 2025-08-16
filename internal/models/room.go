@@ -33,3 +33,29 @@ type RoomResponse struct {
 	CreatedAt    string  `json:"createdAt"`
 	UpdatedAt    string  `json:"updatedAt"`
 }
+
+type RoomSchedule struct {
+	// Name      string `json:"name"`
+	Status    string `json:"status"`
+	StartTime string `json:"startTime"`
+	EndTime   string `json:"endTime"`
+}
+type RoomScheduleResponse struct {
+	RoomName    string         `json:"roomName"`
+	Schedule    []RoomSchedule `json:"schedule"`
+	TotalBooked int            `json:"totalBooked"`
+}
+
+type RoomScheduleAdmin struct {
+	// Name      string `json:"name"`
+	Company        string `json:"company"`
+	StartTime      string `json:"startTime"`
+	EndTime        string `json:"endTime"`
+	Status         string `json:"status"`
+	StatusProgress string `json:"statusProgress"`
+}
+type RoomScheduleAdminResponse struct {
+	RoomName string `json:"roomName"`
+	// Company  string              `json:"company"`
+	Schedule []RoomScheduleAdmin `json:"schedule"`
+}

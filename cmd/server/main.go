@@ -13,7 +13,7 @@ package main
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 // @schemes http
 
-// @host localhost:8080
+// @host localhost:8081
 // @BasePath /
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -21,10 +21,14 @@ package main
 import (
 	"e_meeting/config"
 	"e_meeting/internal/handlers"
-	"e_meeting/internal/middleware"
+	"e_meeting/internal/middlewareAuth"
 	"e_meeting/pkg/db"
 	"e_meeting/pkg/utils"
+	"log"
 	"net/http"
+	"os"
+
+	"github.com/labstack/echo/v4/middleware"
 
 	_ "e_meeting/docs"
 
@@ -35,20 +39,37 @@ import (
 )
 
 func main() {
-	// load .env file
-	if err := godotenv.Load(); err != nil {
-		panic("Failed to load .env file")
+	// Jika APP_ENV=local, dijalankan manual saat run (APP_ENV=local go run cmd/server/main.go)
+	if os.Getenv("APP_ENV") == "local" {
+		err := godotenv.Load(".env.local")
+		if err != nil {
+			log.Fatalf("Error loading .env.local: %v", err)
+		}
 	}
+	// env := os.Getenv("APP_ENV")
+	// fmt.Println(env)
+	// // load .env file
+	// if err := godotenv.Load(".env.local"); err != nil {
+	// 	panic("Failed to load .env file")
+	// }
 
 	// load config
-	cgf := config.New()
+	cfg := config.New()
 
 	// connect to database
-	conn, err := db.NewPostgres(cgf.DBUrl)
+	conn, err := db.NewPostgres(cfg.DBUrl) // connect to postgres
 	if err != nil {
 		panic("Failed to connect to database: " + err.Error())
 	}
 	defer conn.Close()
+	redisConn, err := db.NewRedis(cfg.RedisUrl) // connect to redis
+	if err != nil {
+		panic("Failed to connect to redis: " + err.Error())
+	}
+	defer redisConn.Close()
+
+	// run worker reservation
+	go handlers.WorkerReservation(redisConn, conn)
 
 	// initialize echo framework
 	e := echo.New()
@@ -59,30 +80,37 @@ func main() {
 		})
 	})
 	// set up CORS middleware
-	e.Use(echo.MiddlewareFunc(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Response().Header().Set(echo.HeaderAccessControlAllowOrigin, "*")
-			c.Response().Header().Set(echo.HeaderAccessControlAllowMethods, "GET, POST, PUT, DELETE, OPTIONS")
-			c.Response().Header().Set(echo.HeaderAccessControlAllowHeaders, "Content-Type, Authorization")
-			if c.Request().Method == http.MethodOptions {
-				return c.NoContent(http.StatusNoContent)
-			}
-			return next(c)
-		}
+	// e.Use(echo.MiddlewareFunc(func(next echo.HandlerFunc) echo.HandlerFunc {
+	// 	return func(c echo.Context) error {
+	// 		c.Response().Header().Set(echo.HeaderAccessControlAllowOrigin, "*")
+	// 		c.Response().Header().Set(echo.HeaderAccessControlAllowMethods, "GET, POST, PUT, DELETE, OPTIONS")
+	// 		c.Response().Header().Set(echo.HeaderAccessControlAllowHeaders, "Content-Type, Authorization")
+	// 		if c.Request().Method == http.MethodOptions {
+	// 			return c.NoContent(http.StatusNoContent)
+	// 		}
+	// 		return next(c)
+	// 	}
+	// }))
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS},
+		AllowHeaders: []string{echo.HeaderContentType, echo.HeaderAuthorization},
 	}))
 
 	// set up Swagger documentation
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	// apply JWT middleware
 	group := e.Group("")
-	group.Use(middleware.JwtMiddleware)
+	group.Use(middlewareAuth.JwtMiddleware)
 	// initialize handlers
-	handlers.InitReservationHandler(group, conn)
-	handlers.InitRoomHandler(group, conn)   // initialize room handler
-	handlers.InitSnacksHandler(group, conn) // initialize snacks handler
-	handlers.InitUserHandler(group, conn)   // initialize user handler
-	handlers.InitUserAuthHandler(e, conn)   // initialize user auth handler
+	handlers.InitDashboardHandler(group, conn)              // initialize dashboard handler
+	handlers.InitUploadHandler(group)                       // initialize upload handler
+	handlers.InitReservationHandler(group, conn, redisConn) // initialize reservation handler
+	handlers.InitRoomHandler(group, conn)                   // initialize room handler
+	handlers.InitSnacksHandler(group, conn)                 // initialize snacks handler
+	handlers.InitUserHandler(group, conn)                   // initialize user handler
+	handlers.InitUserAuthHandler(e, conn)                   // initialize user auth handler
 
 	// start the server
-	e.Logger.Fatal(e.Start(":" + cgf.Port))
+	e.Logger.Fatal(e.Start(":" + cfg.Port))
 }
