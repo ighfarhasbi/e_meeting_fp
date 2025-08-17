@@ -72,6 +72,14 @@ func Upload(c echo.Context) error {
 	timestamp := time.Now().Format("20060102150405") // YYYYMMDDHHMMSS
 	newFilename := fmt.Sprintf("%s_%s%s", name, timestamp, ext)
 
+	// Pastikan folder temp ada
+	err = os.MkdirAll("temp", os.ModePerm)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Failed to create temp directory : " + err.Error(),
+		})
+	}
+
 	// Destination
 	dst, err := os.Create("temp/" + newFilename)
 	if err != nil {
