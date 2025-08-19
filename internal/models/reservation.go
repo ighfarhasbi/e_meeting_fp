@@ -1,5 +1,7 @@
 package models
 
+import "github.com/google/uuid"
+
 type PersonalDataCalculation struct {
 	Name         string `json:"name"`
 	NoHp         string `json:"noHp"`
@@ -11,10 +13,10 @@ type PersonalDataCalculation struct {
 }
 
 type SnacksCalculation struct {
-	ID       int    `json:"id"`
-	Category string `json:"category"`
-	Name     string `json:"name"`
-	Price    int    `json:"price"`
+	ID       int     `json:"id"`
+	Category string  `json:"category"`
+	Name     string  `json:"name"`
+	Price    float64 `json:"price"`
 }
 
 type RoomCalculation struct {
@@ -32,4 +34,51 @@ type CalculationResponse struct {
 	Rooms        []RoomCalculation       `json:"rooms"`
 	PersonalData PersonalDataCalculation `json:"personalData"`
 	Total        float64                 `json:"total"`
+}
+
+type ReservationRequest struct {
+	UserID      int               `json:"userID"`
+	Name        string            `json:"name"`
+	PhoneNumber string            `json:"phoneNumber"`
+	Company     string            `json:"company"`
+	Notes       string            `json:"notes"`
+	Rooms       []RoomReservation `json:"rooms"`
+}
+type RoomReservation struct {
+	ID           int    `json:"id"`
+	StartTime    string `json:"startTime"`
+	EndTime      string `json:"endTime"`
+	Participants int    `json:"participants"`
+	SnackID      *int   `json:"snackID"`
+}
+
+type TransactionResponse struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	PhoneNumber string    `json:"phoneNumber"`
+	Company     string    `json:"company"`
+	Total       float64   `json:"total"`
+	Status      string    `json:"status"`
+	CreatedAt   string    `json:"createdAt"`
+	UpdatedAt   string    `json:"updatedAt"`
+	Rooms       []Rooms   `json:"rooms"`
+}
+type Rooms struct {
+	ID            int     `json:"id"`
+	Name          string  `json:"name"`
+	Type          string  `json:"type"`
+	PricePerHour  float64 `json:"pricePerHour"`
+	SubTotalRoom  float64 `json:"subTotalRoom"`
+	SubTotalSnack float64 `json:"subTotalSnack"`
+	Snack         Snack   `json:"snack"`
+}
+type Snack struct {
+	ID any `json:"id"`
+	// Category string  `json:"category"`
+	// Name     string  `json:"name"`
+	// Price    float64 `json:"price"`
+}
+
+type StatusReservation struct {
+	Status string `json:"status"`
 }

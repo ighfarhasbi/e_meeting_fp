@@ -17,4 +17,5 @@ type UpdateUserRequest struct {
 	Email    string `json:"email"`
 	Language string `json:"language"`
 	ImgPath  string `json:"imgUrl"`
+	Password string `json:"password"`
 }
