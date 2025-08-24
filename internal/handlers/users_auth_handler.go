@@ -31,16 +31,16 @@ func InitUserAuthHandler(e *echo.Echo, dbConn *sql.DB) {
 	})
 }
 
-// @Summary RegisterUser handles user registration
-// @Description Register a new user
-// @Tags authentication
-// @Accept json
-// @Produce json
-// @Param user body models.RegisterUserRequest true "User registration data"
-// @Success 200 {object} utils.SuccessResponse{data=nil}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /register [post]
+// Summary RegisterUser handles user registration
+// Description Register a new user
+// Tags authentication
+// Accept json
+// Produce json
+// Param user body models.RegisterUserRequest true "User registration data"
+// Success 200 {object} utils.SuccessResponse{data=nil}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /register [post]
 func RegisterUser(c echo.Context, db *sql.DB) error {
 	var user models.RegisterUserRequest
 	if err := c.Bind(&user); err != nil {
@@ -90,16 +90,16 @@ func RegisterUser(c echo.Context, db *sql.DB) error {
 	})
 }
 
-// @Summary LoginUser handles user login
-// @Description Authenticate user and return JWT tokens
-// @Tags authentication
-// @Accept json
-// @Produce json
-// @Param user body models.LoginUserRequest true "User login data"
-// @Success 200 {object} utils.SuccessResponse{data=utils.TokenResponse}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /login [post]
+// Summary LoginUser handles user login
+// Description Authenticate user and return JWT tokens
+// Tags authentication
+// Accept json
+// Produce json
+// Param user body models.LoginUserRequest true "User login data"
+// Success 200 {object} utils.SuccessResponse{data=utils.TokenResponse}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /login [post]
 func LoginUser(c echo.Context, db *sql.DB) error {
 	// bind request data
 	var loginRequest models.LoginUserRequest
