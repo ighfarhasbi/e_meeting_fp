@@ -4,7 +4,7 @@ import (
 	"e_meeting/internal/entity"
 	"e_meeting/internal/models/request"
 	"e_meeting/internal/models/response"
-	"e_meeting/internal/usecase"
+	usecase "e_meeting/internal/usecase/users"
 	"e_meeting/pkg/utils"
 	"net/http"
 
@@ -12,10 +12,10 @@ import (
 )
 
 type UsersHandler struct {
-	uc *usecase.UserUsecase
+	uc *usecase.AuthUsecase
 }
 
-func NewUsersHandler(e *echo.Echo, uc *usecase.UserUsecase) {
+func NewUsersHandler(e *echo.Echo, uc *usecase.AuthUsecase) {
 	handler := &UsersHandler{uc}
 	e.POST("/register", handler.Register)
 	e.POST("/login", handler.Login)

@@ -13,7 +13,7 @@ func NewDBUsersRepository(db *sql.DB) *DBUsersRepository {
 	return &DBUsersRepository{DB: db}
 }
 
-func (r *DBUsersRepository) Register(user *entity.Users) error {
+func (r *DBUsersRepository) InsertDataUser(user *entity.Users) error {
 	_, err := r.DB.Exec("INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
 		user.Username, user.Email, user.Password)
 	return err

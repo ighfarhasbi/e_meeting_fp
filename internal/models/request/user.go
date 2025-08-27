@@ -11,3 +11,12 @@ type RegisterRequest struct {
 	Password    string `json:"password"`
 	ConfirmPass string `json:"confirmPassword"`
 }
+
+type CheckEmailRequest struct {
+	Email string `json:"email"`
+}
+
+type UpdatePassRequest struct {
+	NewPassword    string `json:"newPassword"`
+	NewConfirmPass string `json:"newConfirmPassword"`
+}

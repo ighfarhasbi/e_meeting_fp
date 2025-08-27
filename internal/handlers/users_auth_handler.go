@@ -184,17 +184,17 @@ func RefreshAccessToken(c echo.Context) error {
 	})
 }
 
-// @Summary CheckEmailExists checks if an email already exists in the database
-// @Description Check if an email already exists in the database
-// @Tags reset password
-// @Accept json
-// @Produce json
-// @Param email body models.CheckEmailRequest true "Email data"
-// @Success 200 {object} utils.RegisterResposnse
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 404 {object} utils.RegisterResposnse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /password/reset_request [post]
+// Summary CheckEmailExists checks if an email already exists in the database
+// Description Check if an email already exists in the database
+// Tags reset password
+// Accept json
+// Produce json
+// Param email body models.CheckEmailRequest true "Email data"
+// Success 200 {object} utils.RegisterResposnse
+// Failure 400 {object} utils.ErrorResponse
+// Failure 404 {object} utils.RegisterResposnse
+// Failure 500 {object} utils.ErrorResponse
+// Router /password/reset_request [post]
 func CheckEmailExists(c echo.Context, db *sql.DB) error {
 	var request models.CheckEmailRequest
 	if err := c.Bind(&request); err != nil {
@@ -252,19 +252,19 @@ func CheckEmailExists(c echo.Context, db *sql.DB) error {
 	})
 }
 
-// @Summary ResetPassword handles password reset
-// @Description Reset user password using reset token
-// @Tags reset password
-// @Accept json
-// @Produce json
-// @Param id path string true "Reset token"
-// @Param request body models.ResetPasswordRequest true "New password data"
-// @Success 200 {object} utils.RegisterResposnse
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 401 {object} utils.ErrorResponse
-// @Failure 404 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /password/reset/{id} [put]
+// Summary ResetPassword handles password reset
+// Description Reset user password using reset token
+// Tags reset password
+// Accept json
+// Produce json
+// Param id path string true "Reset token"
+// Param request body models.ResetPasswordRequest true "New password data"
+// Success 200 {object} utils.RegisterResposnse
+// Failure 400 {object} utils.ErrorResponse
+// Failure 401 {object} utils.ErrorResponse
+// Failure 404 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /password/reset/{id} [put]
 func ResetPassword(c echo.Context, db *sql.DB) error {
 	cfg := config.New() // Ambil JWT secret dari konfigurasi
 	// ambil path parameter token

@@ -2,21 +2,21 @@ package usecase
 
 import (
 	"e_meeting/internal/entity"
-	"e_meeting/internal/repository"
+	repository "e_meeting/internal/repository/users"
 	"e_meeting/pkg/utils"
 	"errors"
 )
 
-type UserUsecase struct {
-	repo repository.UsersRepository
+type AuthUsecase struct {
+	repo repository.AuthRepository
 }
 
 // Membuat instance UserUsecase
-func NewUserUsecase(r repository.UsersRepository) *UserUsecase {
-	return &UserUsecase{repo: r}
+func NewUserUsecase(r repository.AuthRepository) *AuthUsecase {
+	return &AuthUsecase{repo: r}
 }
 
-func (uc *UserUsecase) Register(user *entity.Users, confirmPass string) error {
+func (uc *AuthUsecase) Register(user *entity.Users, confirmPass string) error {
 	// validasi email
 	if err := utils.ValidateEmail(user.Email); err != nil {
 		return errors.New("invalid email : " + err.Error())
@@ -36,10 +36,10 @@ func (uc *UserUsecase) Register(user *entity.Users, confirmPass string) error {
 	}
 	user.Password = hashedPassword
 
-	return uc.repo.Register(user)
+	return uc.repo.InsertDataUser(user)
 }
 
-func (uc *UserUsecase) Login(username, password string) (string, string, error) {
+func (uc *AuthUsecase) Login(username, password string) (string, string, error) {
 	u, err := uc.repo.FindByUsername(username)
 	if err != nil {
 		return "", "", errors.New("invalid username or password")
