@@ -30,7 +30,7 @@ services:
     env_file:
       - .env.docker
     ports:
-      - "8081:8080"
+      - "8082:8080"
     networks:
       - app-network
     restart: unless-stopped
@@ -45,7 +45,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5431:5432"
+      - "5433:5432"
     networks:
       - app-network
     restart: unless-stopped
@@ -54,7 +54,7 @@ services:
     image: redis:alpine3.22
     container_name: redis_db
     ports:
-      - "6379:6379"
+      - "6378:6379"
     networks:
       - app-network
     restart: unless-stopped
