@@ -13,7 +13,7 @@ package main
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 // @schemes http
 
-// @host localhost:8085
+// @host 172.16.148.101:8082
 // @BasePath /
 // @securityDefinitions.apikey BearerAuth
 // @in header
