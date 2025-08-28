@@ -66,7 +66,7 @@ func (h *UsersHandler) Register(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param user body request.LoginRequest true "User login data"
-// @Success 200 {object} utils.SuccessResponse{data=response.LoginResponse}
+// @Success 200 {object} response.LoginResponse
 // @Failure 400 {object} utils.ErrorResponse
 // @Failure 404 {object} utils.ErrorResponse
 // @Failure 500 {object} utils.ErrorResponse
