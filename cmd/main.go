@@ -63,6 +63,9 @@ func main() {
 	}
 	defer redisConn.Close()
 
+	// run worker reservation
+	go handlers.WorkerReservation(redisConn, conn)
+
 	// initialize echo framework
 	e := echo.New()
 	// set up middleware
