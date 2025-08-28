@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
@@ -43,19 +42,17 @@ func InitUserHandler(e *echo.Group, dbConn *sql.DB) {
 // @Failure 500 {object} utils.ErrorResponse
 // @Router /users/{id} [get]
 func GetUserById(c echo.Context, db *sql.DB) error {
-	// ambil header Authorization
-	authHeader := c.Request().Header.Get("Authorization")
-	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-	// parse token untuk mendapatkan username
-	token, _ := utils.VerifyToken(tokenStr)
-	// ambil username dari klaim token
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || claims["username"] == nil {
-		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+	// ambil claim token dari context
+	claims := c.Get("client").(jwt.MapClaims)
+	// ambil user_id dari klaim token
+	userIdFromToken, ok := claims["id"].(float64)
+	if !ok {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
 			Message: "Invalid token claims",
 		})
 	}
-	username := claims["username"].(string)
+	idFromTokenInt := int(userIdFromToken) // konversi ke int
+	// username := claims["username"].(string)
 
 	// ambil user_id dari parameter
 	userId := c.Param("id")
@@ -66,8 +63,8 @@ func GetUserById(c echo.Context, db *sql.DB) error {
 			Message: "Invalid id format : " + err.Error(),
 		})
 	}
-	// query untuk mengambil data user berdasarkan username
-	row := db.QueryRow("SELECT users_id, username, email, role, status, language, img_path, created_at, updated_at FROM users WHERE username = $1", username)
+	// query untuk mengambil data user berdasarkan id
+	row := db.QueryRow("SELECT users_id, username, email, role, status, language, img_path, created_at, updated_at FROM users WHERE users_id = $1", idFromTokenInt)
 
 	// buat struct untuk menyimpan data user
 	var user models.Users
