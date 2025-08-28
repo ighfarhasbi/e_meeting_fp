@@ -112,8 +112,8 @@ func UploadFile(c echo.Context, imgUrl string) (models.UploadRequest, error) {
 	}
 
 	// ambil url dari .env untuk path file
-	// cfg := config.New()
-	// domain := cfg.Domain
+	cfg := config.New()
+	domain := cfg.Domain
 
 	// ambil fileName dari request
 	fileName := path.Base(request.ImageURL)
@@ -138,10 +138,10 @@ func UploadFile(c echo.Context, imgUrl string) (models.UploadRequest, error) {
 		return models.UploadRequest{ImageURL: ""}, fmt.Errorf("error moving file: %v", err)
 	}
 
-	// setelah file dipindahkan, tambahkan domain disini
-	// publicURL := fmt.Sprintf("%s/%s", domain, dstPath)
+	// buat URL baru berdasarkan domain + uploads
+	publicURL := fmt.Sprintf("%s/uploads/%s", domain, fileName)
 
 	fmt.Println("File uploaded:", dstPath)
 
-	return request, nil
+	return models.UploadRequest{ImageURL: publicURL}, nil
 }

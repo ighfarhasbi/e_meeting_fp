@@ -78,6 +78,9 @@ func main() {
 	group := e.Group("")
 	group.Use(middlewareAuth.JwtMiddleware)
 
+	// serve folder "uploads" sebagai static
+	e.Static("/uploads", "uploads")
+
 	// DELIVERY -> HANDLER -> USECASE -> ENTITY
 	// login & register
 	authRepo := repository.NewDBUsersRepository(conn) // isinya query ke db
