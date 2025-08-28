@@ -19,7 +19,7 @@ func GenerateJWTToken(id int, username string, role string, status string) (stri
 		"role":     role,
 		"status":   status,
 		"type":     "access",
-		"exp":      time.Now().Add(24 * time.Hour).Unix(), // Token berlaku selama 24 jam
+		"exp":      time.Now().Add(time.Duration(cfg.ExpAccessToken) * time.Second).Unix(), // Token berlaku selama 24 jam
 		"iat":      time.Now().Unix(),
 	})
 	accessTokenStr, err := accessToken.SignedString([]byte(cfg.JWTSecret))
@@ -33,7 +33,7 @@ func GenerateJWTToken(id int, username string, role string, status string) (stri
 		"role":     role,
 		"status":   status,
 		"type":     "refresh",
-		"exp":      time.Now().Add(7 * 24 * time.Hour).Unix(), // Token berlaku selama 7 hari
+		"exp":      time.Now().Add(time.Duration(cfg.ExpRefreshToken) * time.Second).Unix(), // Token berlaku selama 7 hari
 		"iat":      time.Now().Unix(),
 	})
 	refreshTokenStr, err := refreshToken.SignedString([]byte(cfg.JWTSecret))
@@ -85,7 +85,7 @@ func RefreshAccessToken(refreshToken string) (string, error) {
 		"role":     role,
 		"status":   status,
 		"type":     "access",
-		"exp":      time.Now().Add(24 * time.Hour).Unix(), // Token berlaku selama 24 jam
+		"exp":      time.Now().Add(time.Duration(cfg.ExpAccessToken) * time.Second).Unix(), // Token berlaku selama 24 jam
 		"iat":      time.Now().Unix(),
 	})
 	accessTokenStr, err := accessToken.SignedString([]byte(cfg.JWTSecret))

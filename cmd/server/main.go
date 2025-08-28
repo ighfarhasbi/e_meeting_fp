@@ -20,12 +20,13 @@ package main
 // @name Authorization
 import (
 	"e_meeting/config"
+	delivery "e_meeting/internal/delivery/users"
 	"e_meeting/internal/handlers"
 	"e_meeting/internal/middlewareAuth"
+	repository "e_meeting/internal/repository/users"
+	usecase "e_meeting/internal/usecase/users"
 	"e_meeting/pkg/db"
-	"e_meeting/pkg/utils"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/labstack/echo/v4/middleware"
@@ -46,12 +47,6 @@ func main() {
 			log.Fatalf("Error loading .env.local: %v", err)
 		}
 	}
-	// env := os.Getenv("APP_ENV")
-	// fmt.Println(env)
-	// // load .env file
-	// if err := godotenv.Load(".env.local"); err != nil {
-	// 	panic("Failed to load .env file")
-	// }
 
 	// load config
 	cfg := config.New()
@@ -73,24 +68,7 @@ func main() {
 
 	// initialize echo framework
 	e := echo.New()
-	e.GET("/", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, utils.SuccessResponse{
-			Data:    "Welcome to the E-Meeting API",
-			Message: "Success",
-		})
-	})
-	// set up CORS middleware
-	// e.Use(echo.MiddlewareFunc(func(next echo.HandlerFunc) echo.HandlerFunc {
-	// 	return func(c echo.Context) error {
-	// 		c.Response().Header().Set(echo.HeaderAccessControlAllowOrigin, "*")
-	// 		c.Response().Header().Set(echo.HeaderAccessControlAllowMethods, "GET, POST, PUT, DELETE, OPTIONS")
-	// 		c.Response().Header().Set(echo.HeaderAccessControlAllowHeaders, "Content-Type, Authorization")
-	// 		if c.Request().Method == http.MethodOptions {
-	// 			return c.NoContent(http.StatusNoContent)
-	// 		}
-	// 		return next(c)
-	// 	}
-	// }))
+	// set up middleware
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS},
@@ -102,14 +80,28 @@ func main() {
 	// apply JWT middleware
 	group := e.Group("")
 	group.Use(middlewareAuth.JwtMiddleware)
-	// initialize handlers
+
+	// serve folder "uploads" sebagai static
+	e.Static("/uploads", "uploads")
+
+	// DELIVERY -> HANDLER -> USECASE -> ENTITY
+	// login & register
+	authRepo := repository.NewDBUsersRepository(conn) // isinya query ke db
+	userUC := usecase.NewUserUsecase(authRepo)
+	delivery.NewUsersHandler(e, userUC)
+	// reset password
+	resetPassRepo := repository.NewDBResetPassRepository(conn)
+	resetPassUsecase := usecase.NewResetPassUsecase(resetPassRepo)
+	delivery.NewResetPassHandler(e, resetPassUsecase)
+
+	// belum implementasi clean architecture
 	handlers.InitDashboardHandler(group, conn)              // initialize dashboard handler
 	handlers.InitUploadHandler(group)                       // initialize upload handler
 	handlers.InitReservationHandler(group, conn, redisConn) // initialize reservation handler
 	handlers.InitRoomHandler(group, conn)                   // initialize room handler
 	handlers.InitSnacksHandler(group, conn)                 // initialize snacks handler
 	handlers.InitUserHandler(group, conn)                   // initialize user handler
-	handlers.InitUserAuthHandler(e, conn)                   // initialize user auth handler
+	// handlers.InitUserAuthHandler(e, conn)                   // initialize user auth handler
 
 	// start the server
 	e.Logger.Fatal(e.Start(":" + cfg.Port))

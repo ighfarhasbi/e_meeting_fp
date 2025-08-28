@@ -21,7 +21,7 @@ func InitReservationHandler(e *echo.Group, dbConn *sql.DB, rdb *redis.Client) {
 		return ReservationCalculation(c, dbConn)
 	})
 	e.POST("/reservations", func(c echo.Context) error {
-		return CreateReservation(c, rdb)
+		return CreateReservation(c, rdb, dbConn)
 	})
 	e.GET("/reservations/history", func(c echo.Context) error {
 		return HistoryReservations(c, dbConn)
@@ -41,8 +41,8 @@ func InitReservationHandler(e *echo.Group, dbConn *sql.DB, rdb *redis.Client) {
 // @Security BearerAuth
 // @Param room_id query string true "Room ID"
 // @Param snack_id query string false "Snack ID"
-// @Param start_time query string true "Start time"
-// @Param end_time query string true "End time"
+// @Param start_time query string true "Start time (YYYY-MM-DD HH:MM:SS.000 +0700)"
+// @Param end_time query string true "End time (YYYY-MM-DD HH:MM:SS.000 +0700)"
 // @Param participants query string true "Participants"
 // @Param user_id query string true "User ID"
 // @Param name query string true "Name"
@@ -981,7 +981,7 @@ func UpdateReservationStatus(c echo.Context, db *sql.DB) error {
 // @Failure 401 {object} utils.ErrorResponse
 // @Failure 500 {object} utils.ErrorResponse
 // @Router /reservations [post]
-func CreateReservation(c echo.Context, rdb *redis.Client) error {
+func CreateReservation(c echo.Context, rdb *redis.Client, db *sql.DB) error {
 	// ambil claim token
 	claims := c.Get("client").(jwt.MapClaims)
 	userIDfloat, ok := claims["id"].(float64)
@@ -1000,9 +1000,88 @@ func CreateReservation(c echo.Context, rdb *redis.Client) error {
 		})
 	}
 
+	// validasi user ID
 	if request.UserID != userIDInt {
 		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
 			Message: "Invalid user ID",
+		})
+	}
+	// validasi minimal 1 room
+	if len(request.Rooms) < 1 {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "At least one room must be booked",
+		})
+	}
+	// konversi startTime dan endTime ke time.Time
+	startTimeTime, err := utils.StringToTimestamptz(request.Rooms[0].StartTime)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid start time",
+		})
+	}
+
+	endTimeTime, err := utils.StringToTimestamptz(request.Rooms[0].EndTime)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid end time",
+		})
+	}
+
+	// cek startTime dan endTime minimal hari ini dan waktu sekarang
+	if startTimeTime.Before(time.Now()) || endTimeTime.Before(time.Now()) {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Reservation time must be after current time",
+		})
+	}
+
+	// cek apakah startTime lebih besar atau sama dengan endTime
+	if !startTimeTime.Before(endTimeTime) {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Start time must be before end time",
+		})
+	}
+
+	// cek apakah startTime dan endTime beririsan dengan startTimeDB dan endTimeDB
+	var overlaps bool
+	err = db.QueryRow(`
+    SELECT EXISTS (
+        SELECT 1
+        FROM detail_transaction dt
+        JOIN transactions t ON dt.tx_id = t.tx_id
+        WHERE rooms_id = $1
+          AND t.status != 'canceled'
+          AND (dt.start_time, dt.end_time) OVERLAPS ($2, $3)
+    )
+	`, request.Rooms[0].ID, startTimeTime, endTimeTime).Scan(&overlaps)
+
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to check overlap: " + err.Error(),
+		})
+	}
+
+	if overlaps {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Reservation time overlaps with existing reservation",
+		})
+	}
+	// validasi participants
+	// get room capacity dari db
+	var capacity int
+	err = db.QueryRow("SELECT capacity FROM rooms WHERE rooms_id = $1", request.Rooms[0].ID).Scan(&capacity)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+				Message: "Room not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+			Message: "Failed to get room capacity: " + err.Error(),
+		})
+	}
+	if request.Rooms[0].Participants > capacity || request.Rooms[0].Participants < 1 {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: fmt.Sprintf("Participants must be between 1 and %d", capacity),
 		})
 	}
 

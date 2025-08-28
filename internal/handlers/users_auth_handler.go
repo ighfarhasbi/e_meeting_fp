@@ -31,16 +31,16 @@ func InitUserAuthHandler(e *echo.Echo, dbConn *sql.DB) {
 	})
 }
 
-// @Summary RegisterUser handles user registration
-// @Description Register a new user
-// @Tags authentication
-// @Accept json
-// @Produce json
-// @Param user body models.RegisterUserRequest true "User registration data"
-// @Success 200 {object} utils.SuccessResponse{data=nil}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /register [post]
+// Summary RegisterUser handles user registration
+// Description Register a new user
+// Tags authentication
+// Accept json
+// Produce json
+// Param user body models.RegisterUserRequest true "User registration data"
+// Success 200 {object} utils.SuccessResponse{data=nil}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /register [post]
 func RegisterUser(c echo.Context, db *sql.DB) error {
 	var user models.RegisterUserRequest
 	if err := c.Bind(&user); err != nil {
@@ -90,16 +90,16 @@ func RegisterUser(c echo.Context, db *sql.DB) error {
 	})
 }
 
-// @Summary LoginUser handles user login
-// @Description Authenticate user and return JWT tokens
-// @Tags authentication
-// @Accept json
-// @Produce json
-// @Param user body models.LoginUserRequest true "User login data"
-// @Success 200 {object} utils.SuccessResponse{data=utils.TokenResponse}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /login [post]
+// Summary LoginUser handles user login
+// Description Authenticate user and return JWT tokens
+// Tags authentication
+// Accept json
+// Produce json
+// Param user body models.LoginUserRequest true "User login data"
+// Success 200 {object} utils.SuccessResponse{data=utils.TokenResponse}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /login [post]
 func LoginUser(c echo.Context, db *sql.DB) error {
 	// bind request data
 	var loginRequest models.LoginUserRequest
@@ -152,17 +152,17 @@ func LoginUser(c echo.Context, db *sql.DB) error {
 	})
 }
 
-// @Summary RefreshAccessToken handles token refresh
-// @Description Refresh the access token using the refresh token
-// @Tags authentication
-// @Accept json
-// @Produce json
-// @Param refresh_token body models.RefreshTokenRequest true "Refresh token data"
-// @Success 200 {object} utils.SuccessResponse{data=models.AccessToken}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 401 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /refresh_token [post]
+// Summary RefreshAccessToken handles token refresh
+// Description Refresh the access token using the refresh token
+// Tags authentication
+// Accept json
+// Produce json
+// Param refresh_token body models.RefreshTokenRequest true "Refresh token data"
+// Success 200 {object} utils.SuccessResponse{data=models.AccessToken}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 401 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /refresh_token [post]
 func RefreshAccessToken(c echo.Context) error {
 	// ambil refresh token dari body
 	var request models.RefreshTokenRequest
@@ -184,17 +184,17 @@ func RefreshAccessToken(c echo.Context) error {
 	})
 }
 
-// @Summary CheckEmailExists checks if an email already exists in the database
-// @Description Check if an email already exists in the database
-// @Tags reset password
-// @Accept json
-// @Produce json
-// @Param email body models.CheckEmailRequest true "Email data"
-// @Success 200 {object} utils.RegisterResposnse
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 404 {object} utils.RegisterResposnse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /password/reset_request [post]
+// Summary CheckEmailExists checks if an email already exists in the database
+// Description Check if an email already exists in the database
+// Tags reset password
+// Accept json
+// Produce json
+// Param email body models.CheckEmailRequest true "Email data"
+// Success 200 {object} utils.RegisterResposnse
+// Failure 400 {object} utils.ErrorResponse
+// Failure 404 {object} utils.RegisterResposnse
+// Failure 500 {object} utils.ErrorResponse
+// Router /password/reset_request [post]
 func CheckEmailExists(c echo.Context, db *sql.DB) error {
 	var request models.CheckEmailRequest
 	if err := c.Bind(&request); err != nil {
@@ -252,19 +252,19 @@ func CheckEmailExists(c echo.Context, db *sql.DB) error {
 	})
 }
 
-// @Summary ResetPassword handles password reset
-// @Description Reset user password using reset token
-// @Tags reset password
-// @Accept json
-// @Produce json
-// @Param id path string true "Reset token"
-// @Param request body models.ResetPasswordRequest true "New password data"
-// @Success 200 {object} utils.RegisterResposnse
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 401 {object} utils.ErrorResponse
-// @Failure 404 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /password/reset/{id} [put]
+// Summary ResetPassword handles password reset
+// Description Reset user password using reset token
+// Tags reset password
+// Accept json
+// Produce json
+// Param id path string true "Reset token"
+// Param request body models.ResetPasswordRequest true "New password data"
+// Success 200 {object} utils.RegisterResposnse
+// Failure 400 {object} utils.ErrorResponse
+// Failure 401 {object} utils.ErrorResponse
+// Failure 404 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /password/reset/{id} [put]
 func ResetPassword(c echo.Context, db *sql.DB) error {
 	cfg := config.New() // Ambil JWT secret dari konfigurasi
 	// ambil path parameter token
