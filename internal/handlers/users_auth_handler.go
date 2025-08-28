@@ -152,17 +152,17 @@ func LoginUser(c echo.Context, db *sql.DB) error {
 	})
 }
 
-// @Summary RefreshAccessToken handles token refresh
-// @Description Refresh the access token using the refresh token
-// @Tags authentication
-// @Accept json
-// @Produce json
-// @Param refresh_token body models.RefreshTokenRequest true "Refresh token data"
-// @Success 200 {object} utils.SuccessResponse{data=models.AccessToken}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 401 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /refresh_token [post]
+// Summary RefreshAccessToken handles token refresh
+// Description Refresh the access token using the refresh token
+// Tags authentication
+// Accept json
+// Produce json
+// Param refresh_token body models.RefreshTokenRequest true "Refresh token data"
+// Success 200 {object} utils.SuccessResponse{data=models.AccessToken}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 401 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /refresh_token [post]
 func RefreshAccessToken(c echo.Context) error {
 	// ambil refresh token dari body
 	var request models.RefreshTokenRequest

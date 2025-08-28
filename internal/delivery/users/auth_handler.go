@@ -19,6 +19,7 @@ func NewUsersHandler(e *echo.Echo, uc *usecase.AuthUsecase) {
 	handler := &UsersHandler{uc}
 	e.POST("/register", handler.Register)
 	e.POST("/login", handler.Login)
+	e.POST("/refresh_token", handler.ResetAccessToken)
 }
 
 // @Summary Register a new user
@@ -92,5 +93,34 @@ func (h *UsersHandler) Login(c echo.Context) error {
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
 		},
+	})
+}
+
+// @Summary Refresh access token
+// @Description Refresh access token using refresh token
+// @Tags authentication
+// @Accept json
+// @Produce json
+// @Param request body request.RefreshTokenRequest true "Refresh token data"
+// @Success 200 {object} utils.SuccessResponse{data=string}
+// @Failure 400 {object} utils.ErrorResponse
+// @Router /refresh_token [post]
+func (h *UsersHandler) ResetAccessToken(c echo.Context) error {
+	// bind request data
+	var req request.RefreshTokenRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid request data : " + err.Error(),
+		})
+	}
+	newAccessToken, err := h.uc.RefreshAccessToken(req)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+	return c.JSON(http.StatusOK, utils.SuccessResponse{
+		Message: "Access token refreshed successfully",
+		Data:    newAccessToken,
 	})
 }

@@ -32,7 +32,7 @@ func GenerateResetToken(email string, id int) (string, error) {
 		"email":   email,
 		"user_id": id,
 		"type":    "reset_password",
-		"exp":     time.Now().Add(15 * time.Minute).Unix(), // Token berlaku selama 15 menit
+		"exp":     time.Now().Add(time.Duration(cfg.ExpRefreshToken) * time.Second).Unix(), // Token berlaku selama 15 menit
 		"iat":     time.Now().Unix(),
 	})
 	tokenStr, err := token.SignedString([]byte(cfg.JWTResetPassword))

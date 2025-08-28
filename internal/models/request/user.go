@@ -20,3 +20,7 @@ type UpdatePassRequest struct {
 	NewPassword    string `json:"newPassword"`
 	NewConfirmPass string `json:"newConfirmPassword"`
 }
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refreshToken"`
+}

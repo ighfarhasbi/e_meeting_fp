@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 )
 
 // Config menyimpan konfigurasi aplikasi
@@ -14,6 +15,9 @@ type Config struct {
 	JWTResetPassword string // untuk reset password
 	Domain           string // domain untuk url image
 	RedisUrl         string // untuk redis
+	ExpAccessToken   int    // in seconds
+	ExpRefreshToken  int    // in seconds
+	ExpResetPassword int    // in seconds
 }
 
 // New membaca konfigurasi dari environment
@@ -53,6 +57,33 @@ func New() *Config {
 		log.Fatal("REDIS_URL is not set in env")
 	}
 
+	var (
+		expAccessToken   int
+		expRefreshToken  int
+		expResetPassword int
+	)
+	if os.Getenv("EXP_ACCESS_TOKEN") != "" {
+		var err error
+		expAccessToken, err = strconv.Atoi(os.Getenv("EXP_ACCESS_TOKEN"))
+		if err != nil {
+			log.Fatal("Invalid EXP_ACCESS_TOKEN in env")
+		}
+	}
+	if os.Getenv("EXP_REFRESH_TOKEN") != "" {
+		var err error
+		expRefreshToken, err = strconv.Atoi(os.Getenv("EXP_REFRESH_TOKEN"))
+		if err != nil {
+			log.Fatal("Invalid EXP_REFRESH_TOKEN in env")
+		}
+	}
+	if os.Getenv("EXP_RESET_PASSWORD_TOKEN") != "" {
+		var err error
+		expResetPassword, err = strconv.Atoi(os.Getenv("EXP_RESET_PASSWORD_TOKEN"))
+		if err != nil {
+			log.Fatal("Invalid EXP_RESET_PASSWORD_TOKEN in env")
+		}
+	}
+
 	return &Config{
 		DBUrl:            dbUrl,
 		JWTSecret:        jwtSecret,
@@ -61,5 +92,8 @@ func New() *Config {
 		JWTResetPassword: jwtResetPassword,
 		Domain:           domain,
 		RedisUrl:         redisUrl,
+		ExpAccessToken:   expAccessToken,
+		ExpRefreshToken:  expRefreshToken,
+		ExpResetPassword: expResetPassword,
 	}
 }

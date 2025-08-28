@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"e_meeting/internal/entity"
+	"e_meeting/internal/models/request"
 	repository "e_meeting/internal/repository/users"
 	"e_meeting/pkg/utils"
 	"errors"
@@ -54,4 +55,13 @@ func (uc *AuthUsecase) Login(username, password string) (string, string, error) 
 		return "", "", errors.New("failed to generate JWT token : " + err.Error())
 	}
 	return accessToken, refreshToken, nil
+}
+
+func (uc *AuthUsecase) RefreshAccessToken(req request.RefreshTokenRequest) (string, error) {
+	// panggil utils untuk refresh access token
+	newAccessToken, err := utils.RefreshAccessToken(req.RefreshToken)
+	if err != nil {
+		return "", err
+	}
+	return newAccessToken, nil
 }
