@@ -16,16 +16,16 @@ func InitSnacksHandler(e *echo.Group, dbConn *sql.DB) {
 	})
 }
 
-// @Summary GetSnacks retrieves a list of snacks
-// @Description Get a list of snacks available in the system
-// @Tags snacks
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} utils.SuccessResponse{data=[]models.Snacks}
-// @Failure 401 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /snacks [get]
+// Summary GetSnacks retrieves a list of snacks
+// Description Get a list of snacks available in the system
+// Tags snacks
+// Accept json
+// Produce json
+// Security BearerAuth
+// Success 200 {object} utils.SuccessResponse{data=[]models.Snacks}
+// Failure 401 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /snacks [get]
 func GetSnacks(c echo.Context, db *sql.DB) error {
 	// ambil daftar snacks dari database
 	rows, err := db.Query("SELECT snacks_id, name, price, category FROM snacks")
