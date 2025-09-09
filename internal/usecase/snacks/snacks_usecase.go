@@ -6,10 +6,10 @@ import (
 )
 
 type SnacksUsecase struct {
-	repo *repository.DBSnacksRepository
+	repo repository.SnacksRepository
 }
 
-func NewSnacksUsecase(r *repository.DBSnacksRepository) *SnacksUsecase {
+func NewSnacksUsecase(r repository.SnacksRepository) *SnacksUsecase {
 	return &SnacksUsecase{repo: r}
 }
 
