@@ -1,0 +1,22 @@
+name: CI/CD Direct to VPS
+
+on:
+  push:
+    branches:
+      - main # otomatis jalan tiap push ke branch main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_KEY }}
+          script: |
+            cd ~/final_project/skbe4/e_meeting_fp
+            git pull origin main
+            docker compose up -d --build
