@@ -37,21 +37,21 @@ func InitRoomHandler(e *echo.Group, dbConn *sql.DB) {
 	})
 }
 
-// @Summary GetRooms retrieves a list of rooms with optional filters
-// @Description Get a list of rooms with optional filters for name, type, and capacity
-// @Tags rooms
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param name query string false "Room name"
-// @Param type query string false "Room type"
-// @Param capacity query string false "Room capacity"
-// @Param page query int false "Page number"
-// @Param pageSize query int false "Number of items per page"
-// @Success 200 {object} utils.ListResponse{data=[]models.Room}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /rooms [get]
+// Summary GetRooms retrieves a list of rooms with optional filters
+// Description Get a list of rooms with optional filters for name, type, and capacity
+// Tags rooms
+// Accept json
+// Produce json
+// Security BearerAuth
+// Param name query string false "Room name"
+// Param type query string false "Room type"
+// Param capacity query string false "Room capacity"
+// Param page query int false "Page number"
+// Param pageSize query int false "Number of items per page"
+// Success 200 {object} utils.ListResponse{data=[]models.Room}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /rooms [get]
 func GetRooms(c echo.Context, db *sql.DB) error {
 	// ambil query parameter untuk filter nama ruangan
 	roomName := c.QueryParam("name")
