@@ -14,12 +14,16 @@ func NewRoomsUsecase(r repository.RoomsRepository) *RoomsUsecase {
 	return &RoomsUsecase{repo: r}
 }
 
-func (uc *RoomsUsecase) RoomsList() ([]entity.Rooms, error) {
-	roomsList, err := uc.repo.GetAllRooms()
+func (uc *RoomsUsecase) RoomsList(roomName string, roomType string, capacity int, pageSize int, offset int) ([]entity.Rooms, int, error) {
+	roomsList, err := uc.repo.GetAllRooms(roomName, roomType, capacity, pageSize, offset)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return roomsList, nil
+	totalData, err := uc.repo.CountTotalRooms(roomName, roomType, capacity)
+	if err != nil {
+		return nil, 0, err
+	}
+	return roomsList, totalData, nil
 }
 
 func (uc *RoomsUsecase) GetRoomSchedule(id int, date string) (*response.RoomsSchedules, error) {

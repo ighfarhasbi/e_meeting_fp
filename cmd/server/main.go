@@ -20,12 +20,15 @@ package main
 // @name Authorization
 import (
 	"e_meeting/config"
+	deliveryRooms "e_meeting/internal/delivery/rooms"
 	deliverySnacks "e_meeting/internal/delivery/snacks"
 	delivery "e_meeting/internal/delivery/users"
 	"e_meeting/internal/handlers"
 	"e_meeting/internal/middlewareAuth"
+	repoRooms "e_meeting/internal/repository/rooms"
 	repoSnacks "e_meeting/internal/repository/snacks"
 	repository "e_meeting/internal/repository/users"
+	ucRooms "e_meeting/internal/usecase/rooms"
 	ucSnacks "e_meeting/internal/usecase/snacks"
 	usecase "e_meeting/internal/usecase/users"
 
@@ -101,12 +104,16 @@ func main() {
 	snacksRepo := repoSnacks.NewDBSnacksRepository(conn)
 	snacksUsecase := ucSnacks.NewSnacksUsecase(snacksRepo)
 	deliverySnacks.NewSnackHandler(group, snacksUsecase)
+	// rooms
+	roomsRepo := repoRooms.NewDBRoomsRepository(conn)
+	roomsUsecase := ucRooms.NewRoomsUsecase(roomsRepo)
+	deliveryRooms.NewRoomHandler(group, roomsUsecase)
 
 	// belum implementasi clean architecture
 	handlers.InitDashboardHandler(group, conn)              // initialize dashboard handler
 	handlers.InitUploadHandler(group)                       // initialize upload handler
 	handlers.InitReservationHandler(group, conn, redisConn) // initialize reservation handler
-	handlers.InitRoomHandler(group, conn)                   // initialize room handler
+	// handlers.InitRoomHandler(group, conn)                   // initialize room handler
 	// handlers.InitSnacksHandler(group, conn)                 // initialize snacks handler
 	handlers.InitUserHandler(group, conn) // initialize user handler
 	// handlers.InitUserAuthHandler(e, conn)                   // initialize user auth handler

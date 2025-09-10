@@ -17,8 +17,16 @@ func NewDBRoomsRepository(db *sql.DB) *DBRoomsRepository {
 	}
 }
 
-func (r *DBRoomsRepository) GetAllRooms() ([]entity.Rooms, error) {
-	rows, err := r.DB.Query("SELECT rooms_id, name, type, price_perhour, capacity, img_path, created_at, updated_at FROM rooms")
+func (r *DBRoomsRepository) GetAllRooms(roomName string, roomType string, capacity int, pageSize int, offset int) ([]entity.Rooms, error) {
+	rows, err := r.DB.Query(`
+    	SELECT rooms_id, name, type, price_perhour, capacity, img_path, created_at, updated_at 
+    	FROM rooms
+    	WHERE ($1 = '' OR name ILIKE '%' || $1 || '%')
+    		AND ($2 = '' OR type = $2::room_type)
+      		AND ($3 = 0 OR capacity >= $3)
+    	ORDER BY rooms_id
+    	LIMIT $4 OFFSET $5
+		`, roomName, roomType, capacity, pageSize, offset)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return []entity.Rooms{}, nil
@@ -41,6 +49,20 @@ func (r *DBRoomsRepository) GetAllRooms() ([]entity.Rooms, error) {
 	}
 
 	return roomsList, nil
+}
+func (r *DBRoomsRepository) CountTotalRooms(roomName string, roomType string, capacity int) (int, error) {
+	var total int
+	err := r.DB.QueryRow(`
+		SELECT COUNT(*) 
+		FROM rooms
+		WHERE ($1 = '' OR name ILIKE '%' || $1 || '%')
+			AND ($2 = '' OR type = $2::room_type)
+			AND ($3 = 0 OR capacity >= $3)
+		`, roomName, roomType, capacity).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("%w: %v", ErrDatabase, err)
+	}
+	return total, nil
 }
 
 func (r *DBRoomsRepository) CreateRoom(room *entity.Rooms) error {
@@ -83,7 +105,7 @@ func (r *DBRoomsRepository) DeleteRoomByID(id int) error {
 	return nil
 }
 
-func (r *DBRoomsRepository) GetRoomByIDAndDate(id int, date string) (*response.RoomsSchedules, error) {
+func (r *DBRoomsRepository) GetRoomsByIDAndDate(id int, date string) (*response.RoomsSchedules, error) {
 	// get room_name by id
 	var roomName string
 	err := r.DB.QueryRow("SELECT name FROM rooms WHERE rooms_id = $1", id).Scan(&roomName)
