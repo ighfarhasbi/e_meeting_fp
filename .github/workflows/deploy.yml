@@ -27,18 +27,13 @@ jobs:
           tags: ighfarhasbi/e_meeting_fp:latest
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build-and-push
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_KEY }}
-          script: |
-            cd ~/final_project/skbe4/e_meeting_fp   # lokasi repo docker-compose di VPS
-            git pull origin main
-            docker-compose pull app
-            docker-compose up -d --remove-orphans
+      - name: Deploy on VPS
+        run: |
+          cd ~/final_project/skbe4/e_meeting_fp
+          git pull origin main
+          docker-compose pull app
+          docker-compose up -d --remove-orphans
