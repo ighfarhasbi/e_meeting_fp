@@ -36,4 +36,4 @@ jobs:
           cd ~/final_project/skbe4/e_meeting_fp
           git pull origin main
           docker-compose pull app
-          docker-compose up -d --remove-orphans
+          docker-compose up -d app
