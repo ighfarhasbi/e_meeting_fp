@@ -228,7 +228,7 @@ func CreateRoom(c echo.Context, db *sql.DB) error {
 		}
 
 		// pindahkan file dari temp ke uploads
-		data, err := UploadFile(c, room.ImgPath)
+		data, err := UploadFile(room.ImgPath)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
 				Message: "Failed to upload file: " + err.Error(),
@@ -346,7 +346,7 @@ func UpdateRoom(c echo.Context, db *sql.DB) error {
 		}
 
 		// pindahkan file dari temp ke uploads
-		data, err := UploadFile(c, room.ImgPath)
+		data, err := UploadFile(room.ImgPath)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
 				Message: "Failed to upload file: " + err.Error(),

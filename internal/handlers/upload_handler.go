@@ -22,19 +22,19 @@ func InitUploadHandler(e *echo.Group) {
 	})
 }
 
-// @Summary Upload an image
-// @Description Upload an image to the server
-// @Tags upload image
-// @Accept multipart/form-data
-// @Produce json
-// @Security BearerAuth
-// @Param file formData file true "Image file"
-// @Success 200 {object} utils.SuccessResponse{data=nil}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 401 {object} utils.ErrorResponse
-// @Failure 404 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /upload [post]
+// Summary Upload an image
+// Description Upload an image to the server
+// Tags upload image
+// Accept multipart/form-data
+// Produce json
+// Security BearerAuth
+// Param file formData file true "Image file"
+// Success 200 {object} utils.SuccessResponse{data=nil}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 401 {object} utils.ErrorResponse
+// Failure 404 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /upload [post]
 func Upload(c echo.Context) error {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -106,7 +106,7 @@ func Upload(c echo.Context) error {
 	})
 }
 
-func UploadFile(c echo.Context, imgUrl string) (models.UploadRequest, error) {
+func UploadFile(imgUrl string) (models.UploadRequest, error) {
 	request := models.UploadRequest{
 		ImageURL: imgUrl,
 	}

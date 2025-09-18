@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"e_meeting/internal/entity"
+	"e_meeting/internal/models/request"
 	"e_meeting/internal/models/response"
 	"fmt"
 )
@@ -65,7 +66,7 @@ func (r *DBRoomsRepository) CountTotalRooms(roomName string, roomType string, ca
 	return total, nil
 }
 
-func (r *DBRoomsRepository) CreateRoom(room *entity.Rooms) error {
+func (r *DBRoomsRepository) CreateRoom(room *request.CreateRoomRequest) error {
 	_, err := r.DB.Exec("INSERT INTO rooms (name, type, price_perhour, capacity, img_path) VALUES ($1, $2, $3, $4, $5)",
 		room.Name, room.Type, room.PricePerHour, room.Capacity, room.ImgUrl)
 	if err != nil {

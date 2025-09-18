@@ -22,14 +22,17 @@ import (
 	"e_meeting/config"
 	deliveryRooms "e_meeting/internal/delivery/rooms"
 	deliverySnacks "e_meeting/internal/delivery/snacks"
+	deliveryUploads "e_meeting/internal/delivery/uploads"
 	delivery "e_meeting/internal/delivery/users"
 	"e_meeting/internal/handlers"
 	"e_meeting/internal/middlewareAuth"
 	repoRooms "e_meeting/internal/repository/rooms"
 	repoSnacks "e_meeting/internal/repository/snacks"
+	repoUploads "e_meeting/internal/repository/uploads"
 	repository "e_meeting/internal/repository/users"
 	ucRooms "e_meeting/internal/usecase/rooms"
 	ucSnacks "e_meeting/internal/usecase/snacks"
+	ucUploads "e_meeting/internal/usecase/uploads"
 	usecase "e_meeting/internal/usecase/users"
 
 	"e_meeting/pkg/db"
@@ -108,10 +111,14 @@ func main() {
 	roomsRepo := repoRooms.NewDBRoomsRepository(conn)
 	roomsUsecase := ucRooms.NewRoomsUsecase(roomsRepo)
 	deliveryRooms.NewRoomHandler(group, roomsUsecase)
+	// upload image
+	uploadsRepo := repoUploads.NewLocalUploadsRepository(cfg.Domain)
+	uploadsUsecase := ucUploads.NewUploadUsecase(uploadsRepo, cfg.Domain)
+	deliveryUploads.NewUploadsHandler(group, uploadsUsecase)
 
 	// belum implementasi clean architecture
-	handlers.InitDashboardHandler(group, conn)              // initialize dashboard handler
-	handlers.InitUploadHandler(group)                       // initialize upload handler
+	handlers.InitDashboardHandler(group, conn) // initialize dashboard handler
+	// handlers.InitUploadHandler(group)                       // initialize upload handler
 	handlers.InitReservationHandler(group, conn, redisConn) // initialize reservation handler
 	// handlers.InitRoomHandler(group, conn)                   // initialize room handler
 	// handlers.InitSnacksHandler(group, conn)                 // initialize snacks handler

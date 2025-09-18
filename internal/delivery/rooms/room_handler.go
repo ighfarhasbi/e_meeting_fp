@@ -1,13 +1,18 @@
 package delivery
 
 import (
+	"e_meeting/config"
 	"e_meeting/internal/entity"
+	"e_meeting/internal/models/request"
 	repository "e_meeting/internal/repository/rooms"
 	usecase "e_meeting/internal/usecase/rooms"
 	"e_meeting/pkg/utils"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -111,5 +116,93 @@ func (h *RoomsHandler) RoomsList(c echo.Context) error {
 		PageSize:  pageSize,
 		TotalPage: totalPage,
 		TotalData: totalData,
+	})
+}
+
+func (h *RoomsHandler) CreateRoom(c echo.Context) error {
+	// ambil claim dari context
+	claims := c.Get("client").(jwt.MapClaims)
+	role, ok := claims["role"].(string)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Invalid token claims",
+		})
+	}
+	status, ok := claims["status"].(string)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Invalid token claims",
+		})
+	}
+
+	var room request.CreateRoomRequest
+	if err := c.Bind(&room); err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid request body",
+		})
+	}
+	// validasi input
+	if room.Name == "" || room.Type == "" || room.PricePerHour <= 0 || room.Capacity <= 0 || room.ImgUrl == "" {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Name, type, price per hour, and capacity are required and must be valid",
+		})
+	}
+
+	imgUrl := room.ImgUrl
+	if imgUrl != "" {
+		domain := config.New().Domain
+
+		// validasi url
+		parsedURL, err := url.Parse(room.ImgUrl)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+				Message: "Invalid URL: " + err.Error(),
+			})
+		}
+
+		// ambil baseDomain dari request
+		baseDomain := parsedURL.Scheme + "://" + parsedURL.Host
+
+		// validasi baseDomain
+		if baseDomain != domain {
+			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+				Message: "Invalid base domain: " + baseDomain,
+			})
+		}
+
+		// pindahkan file dari temp ke uploads
+		data, err := UploadFile(room.ImgPath)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to upload file: " + err.Error(),
+			})
+		}
+
+		// ambil data dari channel
+		fmt.Println("fileRequest: ", data)
+		imgUrl = data.ImageURL
+	}
+
+	err := h.uc.CreateRoom(&room, role, status)
+	if err != nil {
+		switch err {
+		case repository.ErrForbidden:
+			return c.JSON(http.StatusForbidden, utils.ErrorResponse{
+				Message: err.Error(),
+			})
+		case repository.ErrRoomAlreadyExists:
+			return c.JSON(http.StatusConflict, utils.ErrorResponse{
+				Message: err.Error(),
+			})
+		case repository.ErrFailedToCreateRoom:
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: err.Error(),
+			})
+		}
+	}
+
+	return c.JSON(http.StatusCreated, utils.SuccessResponse{
+		Message: "Room created successfully",
+		Data:    room,
 	})
 }

@@ -12,4 +12,5 @@ var (
 	ErrNoRoomsAvailable   = errors.New("no rooms available")
 	ErrDatabase           = errors.New("database error")
 	ErrInternalServer     = errors.New("internal server error")
+	ErrForbidden          = errors.New("forbidden: role not authorized")
 )

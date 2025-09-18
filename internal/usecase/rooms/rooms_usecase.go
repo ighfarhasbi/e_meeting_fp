@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"e_meeting/internal/entity"
+	"e_meeting/internal/models/request"
 	"e_meeting/internal/models/response"
 	repository "e_meeting/internal/repository/rooms"
 )
@@ -34,7 +35,13 @@ func (uc *RoomsUsecase) GetRoomSchedule(id int, date string) (*response.RoomsSch
 	return room, nil
 }
 
-func (uc *RoomsUsecase) CreateRoom(room *entity.Rooms) error {
+func (uc *RoomsUsecase) CreateRoom(room *request.CreateRoomRequest, role string, status string) error {
+	if role != "admin" {
+		return repository.ErrForbidden
+	}
+	if status != "active" {
+		return repository.ErrForbidden
+	}
 	if err := uc.repo.CreateRoom(room); err != nil {
 		return err
 	}
