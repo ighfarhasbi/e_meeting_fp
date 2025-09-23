@@ -3,6 +3,7 @@ package delivery
 import (
 	"e_meeting/config"
 	"e_meeting/internal/entity"
+	UploadFile "e_meeting/internal/handlers"
 	"e_meeting/internal/models/request"
 	repository "e_meeting/internal/repository/rooms"
 	usecase "e_meeting/internal/usecase/rooms"
@@ -23,6 +24,7 @@ type RoomsHandler struct {
 func NewRoomHandler(e *echo.Group, uc *usecase.RoomsUsecase) {
 	handler := &RoomsHandler{uc}
 	e.GET("/rooms", handler.RoomsList)
+	e.POST("/rooms", handler.CreateRoom)
 }
 
 // @Summary Get Rooms List
@@ -119,6 +121,20 @@ func (h *RoomsHandler) RoomsList(c echo.Context) error {
 	})
 }
 
+// @Summary Create a new room
+// @Description Create a new room (admin only)
+// @Tags rooms
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param room body request.CreateRoomRequest true "Room details"
+// @Success 201 {object} utils.SuccessResponse{data=request.CreateRoomRequest} "Room created successfully"
+// @Failure 400 {object} utils.ErrorResponse "Invalid request body"
+// @Failure 401 {object} utils.ErrorResponse "Unauthorized"
+// @Failure 403 {object} utils.ErrorResponse "Forbidden"
+// @Failure 409 {object} utils.ErrorResponse "Room already exists"
+// @Failure 500 {object} utils.ErrorResponse "Internal server error"
+// @Router /rooms [post]
 func (h *RoomsHandler) CreateRoom(c echo.Context) error {
 	// ambil claim dari context
 	claims := c.Get("client").(jwt.MapClaims)
@@ -171,7 +187,7 @@ func (h *RoomsHandler) CreateRoom(c echo.Context) error {
 		}
 
 		// pindahkan file dari temp ke uploads
-		data, err := UploadFile(room.ImgPath)
+		data, err := UploadFile.UploadFile(room.ImgUrl)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
 				Message: "Failed to upload file: " + err.Error(),
@@ -181,6 +197,8 @@ func (h *RoomsHandler) CreateRoom(c echo.Context) error {
 		// ambil data dari channel
 		fmt.Println("fileRequest: ", data)
 		imgUrl = data.ImageURL
+		room.ImgUrl = imgUrl
+		fmt.Println("imgUrl: ", imgUrl)
 	}
 
 	err := h.uc.CreateRoom(&room, role, status)

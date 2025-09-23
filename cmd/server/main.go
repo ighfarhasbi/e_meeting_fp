@@ -13,7 +13,7 @@ package main
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 // @schemes http
 
-// @host 172.16.148.101:8082
+// @host localhost:8085
 // @BasePath /
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -28,7 +28,8 @@ import (
 	"e_meeting/internal/middlewareAuth"
 	repoRooms "e_meeting/internal/repository/rooms"
 	repoSnacks "e_meeting/internal/repository/snacks"
-	repoUploads "e_meeting/internal/repository/uploads"
+
+	// repoUploads "e_meeting/internal/repository/uploads"
 	repository "e_meeting/internal/repository/users"
 	ucRooms "e_meeting/internal/usecase/rooms"
 	ucSnacks "e_meeting/internal/usecase/snacks"
@@ -93,6 +94,7 @@ func main() {
 
 	// serve folder "uploads" sebagai static
 	e.Static("/uploads", "uploads")
+	e.Static("/temp", "temp") // untuk akses file sementara sebelum dipindah ke folder uploads
 
 	// DELIVERY -> HANDLER -> USECASE -> ENTITY
 	// login & register
@@ -112,9 +114,9 @@ func main() {
 	roomsUsecase := ucRooms.NewRoomsUsecase(roomsRepo)
 	deliveryRooms.NewRoomHandler(group, roomsUsecase)
 	// upload image
-	uploadsRepo := repoUploads.NewLocalUploadsRepository(cfg.Domain)
-	uploadsUsecase := ucUploads.NewUploadUsecase(uploadsRepo, cfg.Domain)
-	deliveryUploads.NewUploadsHandler(group, uploadsUsecase)
+	// uploadsRepo := repoUploads
+	uploadsUsecase := ucUploads.NewUploadUsecase(cfg.Domain)
+	deliveryUploads.NewUploadsHandler(group, *uploadsUsecase) // pass by value
 
 	// belum implementasi clean architecture
 	handlers.InitDashboardHandler(group, conn) // initialize dashboard handler

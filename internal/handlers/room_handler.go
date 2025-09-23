@@ -158,18 +158,18 @@ func GetRooms(c echo.Context, db *sql.DB) error {
 	})
 }
 
-// @Summary CreateRoom creates a new room
-// @Description Create a new room with the provided details
-// @Tags rooms
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body models.CURoomRequest true "Room details"
-// @Success 201 {object} utils.SuccessResponse{data=nil}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 401 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /rooms [post]
+// Summary CreateRoom creates a new room
+// Description Create a new room with the provided details
+// Tags rooms
+// Accept json
+// Produce json
+// Security BearerAuth
+// Param request body models.CURoomRequest true "Room details"
+// Success 201 {object} utils.SuccessResponse{data=nil}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 401 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /rooms [post]
 func CreateRoom(c echo.Context, db *sql.DB) error {
 	// ambil claim token dari context
 	claims := c.Get("client").(jwt.MapClaims)

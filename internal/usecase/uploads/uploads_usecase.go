@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	repository "e_meeting/internal/repository/uploads"
+	// repository "e_meeting/internal/repository/uploads"
 	"fmt"
 	"io"
 	"os"
@@ -10,29 +10,18 @@ import (
 	"time"
 )
 
-// interface usecase
-// type UploadUsecase interface {
-// 	SaveTemp(fileName string, size int64, src io.Reader) (string, error)
-// 	MoveToUploads(fileName string) (string, error)
-// }
-
 // implementasi usecase
-type uploadUsecase struct {
+type UploadUsecase struct {
 	domain string
 }
 
-// usecase/upload_service.go
-// type UploadUsecase struct {
-// 	Domain string
-// }
-
-func NewUploadUsecase(repo repository.UploadsRepository, domain string) UploadUsecase {
-	return &uploadUsecase{
+func NewUploadUsecase(domain string) *UploadUsecase {
+	return &UploadUsecase{
 		domain: domain,
 	}
 }
 
-func (uc *uploadUsecase) SaveTemp(fileName string, size int64, src io.Reader) (string, error) {
+func (uc *UploadUsecase) SaveTemp(fileName string, size int64, src io.Reader) (string, error) {
 	// validasi ekstensi file dan ukuran file
 	ext := filepath.Ext(fileName)
 	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
@@ -66,19 +55,4 @@ func (uc *uploadUsecase) SaveTemp(fileName string, size int64, src io.Reader) (s
 	}
 
 	return uc.domain + "/temp/" + newName, nil
-}
-
-func (uc *uploadUsecase) MoveToUploads(fileName string) (string, error) {
-	srcPath := "temp/" + fileName
-	dstPath := "uploads/" + fileName
-
-	// buat folder uploads jika belum ada
-	if err := os.MkdirAll("uploads", os.ModePerm); err != nil {
-		return "", err
-	}
-	if err := os.Rename(srcPath, dstPath); err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%s/uploads/%s", uc.domain, fileName), nil
 }
