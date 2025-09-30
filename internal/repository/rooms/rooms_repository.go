@@ -11,6 +11,7 @@ type RoomsRepository interface {
 	CountTotalRooms(roomName string, roomType string, capacity int) (int, error)
 	GetRoomsByIDAndDate(id int, date string) (*response.RoomsSchedules, error)
 	CreateRoom(room *request.CreateRoomRequest) error
-	UpdateRoomByID(room *entity.Rooms) error
+	UpdateRoomByID(id int, room *request.CreateRoomRequest) error
 	DeleteRoomByID(id int) error
+	GetImgRoomUrlByID(id int) (string, error)
 }

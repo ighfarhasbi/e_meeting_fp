@@ -25,6 +25,7 @@ func NewRoomHandler(e *echo.Group, uc *usecase.RoomsUsecase) {
 	handler := &RoomsHandler{uc}
 	e.GET("/rooms", handler.RoomsList)
 	e.POST("/rooms", handler.CreateRoom)
+	e.PUT("/rooms/:id", handler.UpdateRoom)
 }
 
 // @Summary Get Rooms List
@@ -139,13 +140,13 @@ func (h *RoomsHandler) CreateRoom(c echo.Context) error {
 	// ambil claim dari context
 	claims := c.Get("client").(jwt.MapClaims)
 	role, ok := claims["role"].(string)
-	if !ok {
+	if !ok || role != "admin" {
 		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
 			Message: "Invalid token claims",
 		})
 	}
 	status, ok := claims["status"].(string)
-	if !ok {
+	if !ok || status != "active" {
 		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
 			Message: "Invalid token claims",
 		})
@@ -194,7 +195,7 @@ func (h *RoomsHandler) CreateRoom(c echo.Context) error {
 			})
 		}
 
-		// ambil data dari channel
+		// print log data
 		fmt.Println("fileRequest: ", data)
 		imgUrl = data.ImageURL
 		room.ImgUrl = imgUrl
@@ -222,5 +223,135 @@ func (h *RoomsHandler) CreateRoom(c echo.Context) error {
 	return c.JSON(http.StatusCreated, utils.SuccessResponse{
 		Message: "Room created successfully",
 		Data:    room,
+	})
+}
+
+// @Summary Update a room
+// @Description Update a room by ID (admin only)
+// @Tags rooms
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Room ID"
+// @Param room body request.CreateRoomRequest true "Updated room details"
+// @Success 200 {object} utils.SuccessResponse{data=object} "Room updated successfully"
+// @Failure 400 {object} utils.ErrorResponse "Invalid request body or parameters"
+// @Failure 401 {object} utils.ErrorResponse "Unauthorized"
+// @Failure 403 {object} utils.ErrorResponse "Forbidden"
+// @Failure 404 {object} utils.ErrorResponse "Room not found"
+// @Failure 500 {object} utils.ErrorResponse "Internal server error"
+// @Router /rooms/{id} [put]
+func (h *RoomsHandler) UpdateRoom(c echo.Context) error {
+	// ambil claim dari context
+	claims := c.Get("client").(jwt.MapClaims)
+	role, ok := claims["role"].(string)
+	if !ok || role != "admin" {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Invalid token claims",
+		})
+	}
+	status, ok := claims["status"].(string)
+	if !ok || status != "active" {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Invalid token claims",
+		})
+	}
+
+	// ambil id dari param
+	id := c.Param("id")
+	roomID, err := strconv.Atoi(id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid room ID",
+		})
+	}
+
+	// ambil data dari body
+	var room request.CreateRoomRequest
+	if err := c.Bind(&room); err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid request body",
+		})
+	}
+	// validasi input
+	if room.Name == "" || room.Type == "" || room.PricePerHour <= 0 || room.Capacity <= 0 || room.ImgUrl == "" {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Name, type, price per hour, and capacity are required and must be valid",
+		})
+	}
+
+	// ambil data imgUrl dari database berdasarkan id
+	imgUrl, err := h.uc.GetImgRoomUrlByID(roomID)
+	if err != nil {
+		switch err {
+		case repository.ErrRoomNotFound:
+			return c.JSON(http.StatusNotFound, utils.ErrorResponse{
+				Message: err.Error(),
+			})
+		case repository.ErrDatabase:
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: err.Error(),
+			})
+		}
+	}
+
+	// jika imgUrl dari body berbeda dengan imgUrl dari database, maka pindahkan file dari temp ke uploads
+	if room.ImgUrl != imgUrl {
+		domain := config.New().Domain
+
+		// validasi url
+		parsedURL, err := url.Parse(room.ImgUrl)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+				Message: "Invalid URL: " + err.Error(),
+			})
+		}
+
+		// ambil baseDomain dari request
+		baseDomain := parsedURL.Scheme + "://" + parsedURL.Host
+
+		// validasi baseDomain
+		if baseDomain != domain {
+			return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+				Message: "Invalid base domain: " + baseDomain,
+			})
+		}
+
+		// pindahkan file dari temp ke uploads
+		data, err := UploadFile.UploadFile(room.ImgUrl)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: "Failed to upload file: " + err.Error(),
+			})
+		}
+
+		// print log data
+		fmt.Println("fileRequest: ", data)
+		imgUrl = data.ImageURL
+		room.ImgUrl = imgUrl
+		fmt.Println("imgUrl: ", imgUrl)
+	}
+
+	err = h.uc.UpdateRoom(roomID, &room, role, status)
+	if err != nil {
+		switch err {
+		case repository.ErrForbidden:
+			return c.JSON(http.StatusForbidden, utils.ErrorResponse{
+				Message: err.Error(),
+			})
+		case repository.ErrRoomNotFound:
+			return c.JSON(http.StatusNotFound, utils.ErrorResponse{
+				Message: err.Error(),
+			})
+		case repository.ErrFailedToUpdateRoom:
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: err.Error(),
+			})
+		}
+	}
+
+	return c.JSON(http.StatusOK, utils.SuccessResponse{
+		Message: "Room updated successfully",
+		Data:    nil,
 	})
 }

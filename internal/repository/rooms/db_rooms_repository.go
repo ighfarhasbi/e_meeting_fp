@@ -75,9 +75,21 @@ func (r *DBRoomsRepository) CreateRoom(room *request.CreateRoomRequest) error {
 	return nil
 }
 
-func (r *DBRoomsRepository) UpdateRoomByID(room *entity.Rooms) error {
+func (r *DBRoomsRepository) GetImgRoomUrlByID(id int) (string, error) {
+	var imgUrl string
+	err := r.DB.QueryRow("SELECT img_path FROM rooms WHERE rooms_id = $1", id).Scan(&imgUrl)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", ErrRoomNotFound
+		}
+		return "", fmt.Errorf("%w: %v", ErrDatabase, err)
+	}
+	return imgUrl, nil
+}
+
+func (r *DBRoomsRepository) UpdateRoomByID(id int, room *request.CreateRoomRequest) error {
 	result, err := r.DB.Exec("UPDATE rooms SET name = $1, type = $2, price_perhour = $3, capacity = $4, img_path = $5 WHERE rooms_id = $6",
-		room.Name, room.Type, room.PricePerHour, room.Capacity, room.ImgUrl, room.ID)
+		room.Name, room.Type, room.PricePerHour, room.Capacity, room.ImgUrl, id)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrInternalServer, err)
 	}

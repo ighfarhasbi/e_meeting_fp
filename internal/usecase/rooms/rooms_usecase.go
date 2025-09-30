@@ -48,9 +48,23 @@ func (uc *RoomsUsecase) CreateRoom(room *request.CreateRoomRequest, role string,
 	return nil
 }
 
-func (uc *RoomsUsecase) UpdateRoom(room *entity.Rooms) error {
+func (uc *RoomsUsecase) GetImgRoomUrlByID(id int) (string, error) {
+	url, err := uc.repo.GetImgRoomUrlByID(id)
+	if err != nil {
+		return "", err
+	}
+	return url, nil
+}
 
-	if err := uc.repo.UpdateRoomByID(room); err != nil {
+func (uc *RoomsUsecase) UpdateRoom(id int, room *request.CreateRoomRequest, role string, status string) error {
+	if role != "admin" {
+		return repository.ErrForbidden
+	}
+	if status != "active" {
+		return repository.ErrForbidden
+	}
+
+	if err := uc.repo.UpdateRoomByID(id, room); err != nil {
 		return err
 	}
 	return nil

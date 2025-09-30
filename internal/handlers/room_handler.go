@@ -255,19 +255,19 @@ func CreateRoom(c echo.Context, db *sql.DB) error {
 	})
 }
 
-// @Summary UpdateRoom updates an existing room
-// @Description Update an existing room with the provided details
-// @Tags rooms
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "Room ID"
-// @Param request body models.CURoomRequest true "Room details"
-// @Success 200 {object} utils.SuccessResponse{data=nil}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 401 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /rooms/{id} [put]
+// Summary UpdateRoom updates an existing room
+// Description Update an existing room with the provided details
+// Tags rooms
+// Accept json
+// Produce json
+// Security BearerAuth
+// Param id path string true "Room ID"
+// Param request body models.CURoomRequest true "Room details"
+// Success 200 {object} utils.SuccessResponse{data=nil}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 401 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /rooms/{id} [put]
 func UpdateRoom(c echo.Context, db *sql.DB) error {
 	// ambil claim token dari context
 	claims := c.Get("client").(jwt.MapClaims)
