@@ -71,7 +71,17 @@ func (uc *RoomsUsecase) UpdateRoom(id int, room *request.CreateRoomRequest, role
 }
 
 func (uc *RoomsUsecase) DeleteRoom(id int) error {
+	// cek apakah room sedang digunakan di detail_transaction
+	count, err := uc.repo.GetRoomWithTx(id)
+	if err != nil {
+		return err
+	}
+	// jika count > 0, berarti room sudah pernah digunakan di transaksi
+	if count > 0 {
+		return repository.ErrFailedToDeleteRoom
+	}
 
+	// jika count == 0, berarti room belum pernah digunakan di transaksi, boleh dihapus
 	if err := uc.repo.DeleteRoomByID(id); err != nil {
 		return err
 	}

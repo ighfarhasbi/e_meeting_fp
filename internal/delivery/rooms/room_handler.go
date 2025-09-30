@@ -26,6 +26,7 @@ func NewRoomHandler(e *echo.Group, uc *usecase.RoomsUsecase) {
 	e.GET("/rooms", handler.RoomsList)
 	e.POST("/rooms", handler.CreateRoom)
 	e.PUT("/rooms/:id", handler.UpdateRoom)
+	e.DELETE("/rooms/:id", handler.DeleteRoom)
 }
 
 // @Summary Get Rooms List
@@ -352,6 +353,69 @@ func (h *RoomsHandler) UpdateRoom(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, utils.SuccessResponse{
 		Message: "Room updated successfully",
+		Data:    nil,
+	})
+}
+
+// @Summary Delete a room
+// @Description Delete a room by ID (admin only)
+// @Tags rooms
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Room ID"
+// @Success 200 {object} utils.SuccessResponse{data=object} "Room deleted successfully"
+// @Failure 400 {object} utils.ErrorResponse "Invalid room ID"
+// @Failure 401 {object} utils.ErrorResponse "Unauthorized"
+// @Failure 403 {object} utils.ErrorResponse "Forbidden"
+// @Failure 404 {object} utils.ErrorResponse "Room not found"
+// @Failure 500 {object} utils.ErrorResponse "Internal server error"
+// @Router /rooms/{id} [delete]
+func (h *RoomsHandler) DeleteRoom(c echo.Context) error {
+	// ambil id dari param
+	id := c.Param("id")
+	roomID, err := strconv.Atoi(id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse{
+			Message: "Invalid room ID",
+		})
+	}
+
+	// ambil claim dari context
+	claims := c.Get("client").(jwt.MapClaims)
+	role, ok := claims["role"].(string)
+	if !ok || role != "admin" {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Invalid token claims",
+		})
+	}
+	status, ok := claims["status"].(string)
+	if !ok || status != "active" {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse{
+			Message: "Invalid token claims",
+		})
+	}
+
+	err = h.uc.DeleteRoom(roomID)
+	if err != nil {
+		switch err {
+		case repository.ErrFailedToDeleteRoom:
+			return c.JSON(http.StatusForbidden, utils.ErrorResponse{
+				Message: "Room cannot be deleted as it is associated with existing transactions",
+			})
+		case repository.ErrRoomNotFound:
+			return c.JSON(http.StatusNotFound, utils.ErrorResponse{
+				Message: err.Error(),
+			})
+		case repository.ErrInternalServer:
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse{
+				Message: err.Error(),
+			})
+		}
+	}
+
+	return c.JSON(http.StatusOK, utils.SuccessResponse{
+		Message: "Room deleted successfully",
 		Data:    nil,
 	})
 }

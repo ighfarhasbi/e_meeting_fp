@@ -12,6 +12,7 @@ type RoomsRepository interface {
 	GetRoomsByIDAndDate(id int, date string) (*response.RoomsSchedules, error)
 	CreateRoom(room *request.CreateRoomRequest) error
 	UpdateRoomByID(id int, room *request.CreateRoomRequest) error
+	GetRoomWithTx(id int) (int, error)
 	DeleteRoomByID(id int) error
 	GetImgRoomUrlByID(id int) (string, error)
 }

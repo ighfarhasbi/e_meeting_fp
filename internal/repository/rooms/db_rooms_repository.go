@@ -103,17 +103,26 @@ func (r *DBRoomsRepository) UpdateRoomByID(id int, room *request.CreateRoomReque
 	return nil
 }
 
+func (r *DBRoomsRepository) GetRoomWithTx(id int) (int, error) {
+	var count int
+	err := r.DB.QueryRow("SELECT COUNT(*) FROM detail_transaction WHERE rooms_id = $1", id).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("%w: %v", ErrDatabase, err)
+	}
+	return count, nil
+}
+
 func (r *DBRoomsRepository) DeleteRoomByID(id int) error {
 	result, err := r.DB.Exec("DELETE FROM rooms WHERE rooms_id = $1", id)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrInternalServer, err)
+		return ErrInternalServer
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrInternalServer, err)
+		return ErrInternalServer
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("%w: %v", ErrRoomNotFound, err) // Room not found
+		return ErrRoomNotFound
 	}
 	return nil
 }

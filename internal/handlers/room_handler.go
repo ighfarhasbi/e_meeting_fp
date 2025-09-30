@@ -373,19 +373,19 @@ func UpdateRoom(c echo.Context, db *sql.DB) error {
 	})
 }
 
-// @Summary DeleteRoom deletes a room
-// @Description Delete a room with the provided ID
-// @Tags rooms
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "Room ID"
-// @Success 200 {object} utils.SuccessResponse{data=nil}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 401 {object} utils.ErrorResponse
-// @Failure 404 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /rooms/{id} [delete]
+// Summary DeleteRoom deletes a room
+// Description Delete a room with the provided ID
+// Tags rooms
+// Accept json
+// Produce json
+// Security BearerAuth
+// Param id path string true "Room ID"
+// Success 200 {object} utils.SuccessResponse{data=nil}
+// Failure 400 {object} utils.ErrorResponse
+// Failure 401 {object} utils.ErrorResponse
+// Failure 404 {object} utils.ErrorResponse
+// Failure 500 {object} utils.ErrorResponse
+// Router /rooms/{id} [delete]
 func DeleteRoom(c echo.Context, db *sql.DB) error {
 	// ambil claim token dari context
 	claims := c.Get("client").(jwt.MapClaims)
